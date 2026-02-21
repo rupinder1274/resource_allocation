@@ -1,0 +1,325 @@
+<h1>Practice Master</h1>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<!-- Search & Pagination Bar -->
+<form id="topControls" class="search-bar" style="margin-bottom: 20px; display: flex; gap: 10px; align-items: center;">
+  <input type="text" id="searchInput" placeholder="🔍 Search practices..." style="padding: 12px; font-size: 15px; border-radius: 10px; border: 1px solid #ccc; width: 250px;" />
+  <a href="/upload-practice-master" class="toolbar-btn">📤 Upload Practices</a>
+  <a href="#" id="addPracticeBtn" class="toolbar-btn">➕ Add Practice</a>
+  <button type="button" id="exportExcelBtn" class="toolbar-btn" style="border: none;">📥 Excel</button>
+  <button type="button" id="bulkDeleteBtn" class="toolbar-btn" style="display: none;" onclick="bulkDelete()">🗑 Delete Selected</button>
+</form>
+
+<div class="table-container">
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 50px;">
+          <input type="checkbox" id="selectAll" onchange="toggleSelectAll()" style="transform: scale(1.2);">
+        </th>
+        <th>SW Practice</th>
+        <th>Practice Manager</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% if (practices.length === 0) { %>
+        <tr>
+          <td colspan="4" style="text-align: center;">No practice records found.</td>
+        </tr>
+      <% } else { %>
+        <% practices.forEach((practice, idx) => { %>
+          <tr data-idx="<%= idx %>" data-id="<%= practice._id %>">
+            <td>
+              <input type="checkbox" class="row-checkbox" value="<%= practice._id %>" onchange="toggleBulkDeleteButton()" style="transform: scale(1.2);">
+            </td>
+            <td><%= practice.practiceName %></td>
+            <td><%= practice.practiceManager %></td>
+            <td class="actions">
+              <button type="button" class="edit-btn" data-idx="<%= idx %>" style="background: #3498db; color: #222; border: none; border-radius: 5px; padding: 5px 12px; cursor: pointer; font-size: 14px;">✏ Edit</button>
+              <form method="POST" action="/practice-master/delete/<%= practice._id %>" style="display:inline;" onsubmit="return confirm('Are you sure you want to delete this practice?');">
+                <button type="submit" style="font-size: 22px; line-height: 1; padding: 2px 10px;">🗑</button>
+              </form>
+            </td>
+          </tr>
+        <% }) %>
+      <% } %>
+    </tbody>
+  </table>
+</div>
+
+<!-- Add/Edit Practice Modal -->
+<div id="practiceModal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.3); align-items:center; justify-content:center; z-index:1000;">
+  <div style="background:#fff; padding:24px; border-radius:8px; min-width:300px; position:relative;">
+    <h3 id="modalTitle">Add Practice</h3>
+    <form id="practiceForm" method="POST" action="/practice-master/add">
+      <input type="hidden" name="_id" id="practiceId">
+      <div style="margin-bottom:12px;">
+        <label>Practice Name:</label><br>
+        <input type="text" name="practiceName" id="practiceName" required style="width:100%;">
+      </div>
+      <div style="margin-bottom:12px;">
+        <label>Practice Manager:</label><br>
+        <input type="text" name="practiceManager" id="practiceManager" required style="width:100%;">
+      </div>
+      <div style="text-align:right;">
+        <button type="button" id="cancelModalBtn" style="margin-right:8px;">Cancel</button>
+        <button type="submit" id="savePracticeBtn">Save</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  const searchInput = document.getElementById('searchInput');
+  const rowsPerPageSelector = document.getElementById('rowsPerPage');
+  let currentPage = 1;
+  let rowsPerPage = (!rowsPerPageSelector || rowsPerPageSelector.value === 'all') ? 'all' : parseInt(rowsPerPageSelector.value);
+
+  function renderTable() {
+    const filter = searchInput.value.toLowerCase();
+    const table = document.querySelector('.table-container table');
+    const allRows = Array.from(table.querySelectorAll('tbody tr'));
+    const dataRows = allRows.filter(row => row.querySelectorAll('td').length > 1);
+
+    const filteredRows = dataRows.filter(row => {
+      const cells = row.querySelectorAll('td');
+      const text = Array.from(cells).slice(1).map(td => td.textContent.toLowerCase()).join(' '); // Skip checkbox column
+      return text.includes(filter);
+    });
+
+    dataRows.forEach(row => row.style.display = 'none');
+
+    let paginatedRows = filteredRows;
+    rowsPerPage = (!rowsPerPageSelector || rowsPerPageSelector.value === 'all') ? 'all' : parseInt(rowsPerPageSelector.value);
+    const totalPages = rowsPerPage === 'all' ? 1 : Math.ceil(filteredRows.length / rowsPerPage);
+    if (currentPage > totalPages) currentPage = totalPages;
+
+    if (rowsPerPage !== 'all') {
+      const startIdx = (currentPage - 1) * rowsPerPage;
+      const endIdx = startIdx + rowsPerPage;
+      paginatedRows = filteredRows.slice(startIdx, endIdx);
+    }
+
+    paginatedRows.forEach(row => row.style.display = '');
+
+    const noRecordsRow = allRows.find(row => row.querySelectorAll('td').length === 1);
+    if (filteredRows.length === 0 && noRecordsRow) {
+      noRecordsRow.style.display = '';
+    } else if (noRecordsRow) {
+      noRecordsRow.style.display = 'none';
+    }
+
+    // Reset checkbox states after filtering
+    document.getElementById('selectAll').checked = false;
+    document.getElementById('selectAll').indeterminate = false;
+    document.querySelectorAll('.row-checkbox').forEach(cb => cb.checked = false);
+    toggleBulkDeleteButton();
+  }
+
+  const addBtn = document.getElementById('addPracticeBtn');
+  const modal = document.getElementById('practiceModal');
+  const cancelModalBtn = document.getElementById('cancelModalBtn');
+  const practiceForm = document.getElementById('practiceForm');
+  const modalTitle = document.getElementById('modalTitle');
+  const practiceIdInput = document.getElementById('practiceId');
+  const practiceNameInput = document.getElementById('practiceName');
+  const practiceManagerInput = document.getElementById('practiceManager');
+
+  addBtn.onclick = function() {
+    modalTitle.textContent = 'Add Practice';
+    practiceForm.action = '/practice-master/add';
+    practiceIdInput.value = '';
+    practiceNameInput.value = '';
+    practiceManagerInput.value = '';
+    modal.style.display = 'flex';
+  };
+
+  cancelModalBtn.onclick = function() {
+    modal.style.display = 'none';
+  };
+
+  function attachEditHandlers() {
+    document.querySelectorAll('.edit-btn').forEach(btn => {
+      btn.onclick = function() {
+        const idx = btn.getAttribute('data-idx');
+        const row = document.querySelector(`tr[data-idx='${idx}']`);
+        const cells = row.querySelectorAll('td');
+        modalTitle.textContent = 'Edit Practice';
+        practiceForm.action = '/practice-master/edit';
+        practiceIdInput.value = row.getAttribute('data-id');
+    // first TD is the checkbox, so practice name is at index 1 and manager at index 2
+    practiceNameInput.value = cells[1].textContent;
+    practiceManagerInput.value = cells[2].textContent;
+        modal.style.display = 'flex';
+      };
+    });
+  }
+
+  window.onclick = function(e) {
+    if (e.target === modal) modal.style.display = 'none';
+  };
+
+  function renderTableWithHandlers() {
+    renderTable();
+    attachEditHandlers();
+  }
+
+  searchInput.addEventListener('input', () => {
+    currentPage = 1;
+    renderTableWithHandlers();
+  });
+
+  if (rowsPerPageSelector) {
+    rowsPerPageSelector.addEventListener('change', () => {
+      currentPage = 1;
+      renderTableWithHandlers();
+    });
+  }
+
+  renderTableWithHandlers();
+
+  // Bulk Delete Functions
+  function toggleSelectAll() {
+    const selectAllCheckbox = document.getElementById('selectAll');
+    const rowCheckboxes = document.querySelectorAll('.row-checkbox');
+    
+    rowCheckboxes.forEach(checkbox => {
+      if (checkbox.closest('tr').style.display !== 'none') {
+        checkbox.checked = selectAllCheckbox.checked;
+      }
+    });
+    
+    toggleBulkDeleteButton();
+  }
+
+  function toggleBulkDeleteButton() {
+    const checkedBoxes = document.querySelectorAll('.row-checkbox:checked');
+    const bulkDeleteBtn = document.getElementById('bulkDeleteBtn');
+    const selectAllCheckbox = document.getElementById('selectAll');
+    
+    if (checkedBoxes.length > 0) {
+      bulkDeleteBtn.style.display = 'inline-block';
+    } else {
+      bulkDeleteBtn.style.display = 'none';
+    }
+
+    // Update select all checkbox state
+    const visibleCheckboxes = Array.from(document.querySelectorAll('.row-checkbox')).filter(cb => 
+      cb.closest('tr').style.display !== 'none'
+    );
+    const checkedVisibleBoxes = visibleCheckboxes.filter(cb => cb.checked);
+    
+    if (checkedVisibleBoxes.length === visibleCheckboxes.length && visibleCheckboxes.length > 0) {
+      selectAllCheckbox.checked = true;
+      selectAllCheckbox.indeterminate = false;
+    } else if (checkedVisibleBoxes.length > 0) {
+      selectAllCheckbox.checked = false;
+      selectAllCheckbox.indeterminate = true;
+    } else {
+      selectAllCheckbox.checked = false;
+      selectAllCheckbox.indeterminate = false;
+    }
+  }
+
+  function bulkDelete() {
+    const checkedBoxes = document.querySelectorAll('.row-checkbox:checked');
+    if (checkedBoxes.length === 0) {
+      alert('Please select at least one practice to delete.');
+      return;
+    }
+
+    const selectedIds = Array.from(checkedBoxes).map(cb => cb.value);
+    const confirmMessage = `Are you sure you want to delete ${selectedIds.length} selected practice(s)?`;
+    
+    if (confirm(confirmMessage)) {
+      // Create a form and submit it
+      const form = document.createElement('form');
+      form.method = 'POST';
+      form.action = '/practice-master/bulk-delete';
+      
+      // Add CSRF token
+      const csrfInput = document.createElement('input');
+      csrfInput.type = 'hidden';
+      csrfInput.name = '_csrf';
+      csrfInput.value = '<%= csrfToken %>';
+      form.appendChild(csrfInput);
+      
+      selectedIds.forEach(id => {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'ids[]';
+        input.value = id;
+        form.appendChild(input);
+      });
+      
+      document.body.appendChild(form);
+      form.submit();
+    }
+  }
+
+  // Bulk Delete Functions
+  function toggleSelectAll() {
+    const selectAllCheckbox = document.getElementById('selectAll');
+    const rowCheckboxes = document.querySelectorAll('.row-checkbox');
+    
+    rowCheckboxes.forEach(checkbox => {
+      if (checkbox.closest('tr').style.display !== 'none') {
+        checkbox.checked = selectAllCheckbox.checked;
+      }
+    });
+    
+    toggleBulkDeleteButton();
+  }
+
+  function toggleBulkDeleteButton() {
+    const checkedBoxes = document.querySelectorAll('.row-checkbox:checked');
+    const bulkDeleteBtn = document.getElementById('bulkDeleteBtn');
+    const selectAllCheckbox = document.getElementById('selectAll');
+    
+    if (checkedBoxes.length > 0) {
+      bulkDeleteBtn.style.display = 'inline-block';
+    } else {
+      bulkDeleteBtn.style.display = 'none';
+    }
+
+    // Update select all checkbox state
+    const visibleCheckboxes = Array.from(document.querySelectorAll('.row-checkbox')).filter(cb => 
+      cb.closest('tr').style.display !== 'none'
+    );
+    const checkedVisibleBoxes = visibleCheckboxes.filter(cb => cb.checked);
+    
+    if (checkedVisibleBoxes.length === visibleCheckboxes.length && visibleCheckboxes.length > 0) {
+      selectAllCheckbox.checked = true;
+      selectAllCheckbox.indeterminate = false;
+    } else if (checkedVisibleBoxes.length > 0) {
+      selectAllCheckbox.checked = false;
+      selectAllCheckbox.indeterminate = true;
+    } else {
+      selectAllCheckbox.checked = false;
+      selectAllCheckbox.indeterminate = false;
+    }
+  }
+
+  // Export to Excel functionality
+  document.getElementById('exportExcelBtn').onclick = function() {
+    const table = document.querySelector('.table-container table');
+    const clone = table.cloneNode(true);
+    
+    // Remove the checkbox column and actions column
+    clone.querySelector('thead tr').removeChild(clone.querySelector('thead tr th:first-child')); // Remove checkbox header
+    clone.querySelector('thead tr').removeChild(clone.querySelector('thead tr').lastElementChild); // Remove actions header
+    
+    clone.querySelectorAll('tbody tr').forEach(row => {
+      if (row.cells.length > 1) { // Skip "no data" rows
+        row.removeChild(row.firstElementChild); // Remove checkbox cell
+        row.removeChild(row.lastElementChild); // Remove actions cell
+      }
+    });
+    
+    const ws = XLSX.utils.table_to_sheet(clone);
+    ws['!cols'] = Array.from(clone.querySelectorAll('thead th')).map(th => ({ wch: Math.max(12, th.textContent.length + 2) }));
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Practices");
+    XLSX.writeFile(wb, "practices.xlsx");
+  };
+</script>

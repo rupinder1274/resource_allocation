@@ -1,0 +1,1417 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Manager Schedule</title>
+  
+  <!-- Favicon -->
+  <link rel="icon" type="image/jpeg" href="/logo.jpg">
+  <link rel="shortcut icon" type="image/jpeg" href="/logo.jpg">
+  <link rel="apple-touch-icon" href="/logo.jpg">
+  
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Select2 CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+  <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
+  <style>
+    #employee-table {
+      display: none;
+    }
+    .form-section {
+      margin-bottom: 20px;
+    }
+    .conflict-warning {
+      background-color: #fff3cd;
+      border: 1px solid #ffeaa7;
+      border-radius: 0.375rem;
+      padding: 0.75rem;
+      margin: 0.5rem 0;
+      color: #856404;
+    }
+    .allocation-status {
+      font-size: 0.875rem;
+      font-weight: 500;
+    }
+    
+    /* Enhanced multi-select dropdown styling */
+    .practice-dropdown-container {
+      position: relative;
+    }
+    
+    .practice-dropdown-toggle {
+      width: 100%;
+      min-height: 38px;
+      padding: 0.5rem 2.5rem 0.5rem 0.75rem;
+      border: 1px solid #ced4da;
+      border-radius: 0.375rem;
+      background-color: #fff;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      transition: all 0.2s ease;
+    }
+    
+    .practice-dropdown-toggle:hover {
+      border-color: #0d6efd;
+      box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+    }
+    
+    .practice-dropdown-toggle.open {
+      border-color: #0d6efd;
+      box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+    }
+    
+    .practice-dropdown-arrow {
+      position: absolute;
+      right: 0.75rem;
+      top: 50%;
+      transform: translateY(-50%);
+      transition: transform 0.2s ease;
+      font-size: 0.8rem;
+      color: #6c757d;
+    }
+    
+    .practice-dropdown-toggle.open .practice-dropdown-arrow {
+      transform: translateY(-50%) rotate(180deg);
+    }
+    
+    .practice-selection-text {
+      color: #6c757d;
+      font-style: italic;
+    }
+    
+    .practice-selection-count {
+      background-color: #0d6efd;
+      color: white;
+      padding: 0.125rem 0.5rem;
+      border-radius: 1rem;
+      font-size: 0.75rem;
+      font-weight: 600;
+      margin-left: 0.5rem;
+    }
+    
+    .practice-checkbox-container {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      z-index: 1000;
+      max-height: 190px;
+      overflow-y: auto;
+      border: 1px solid #dee2e6;
+      border-radius: 0.375rem;
+      background-color: #fff;
+      box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+      padding: 0.5rem;
+      display: none;
+    }
+    
+    .practice-checkbox-container.show {
+      display: block;
+    }
+    
+    .practice-item {
+      padding: 0.5rem 0.75rem;
+      margin: 0.125rem 0;
+      border-radius: 0.25rem;
+      transition: all 0.2s ease;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+    }
+    
+    .practice-item:hover {
+      background-color: #f8f9fa;
+    }
+    
+    .practice-item.selected {
+      background-color: #e7f3ff;
+      border: 1px solid #0d6efd;
+    }
+    
+    .practice-checkbox {
+      margin-right: 0.75rem;
+      transform: scale(1.1);
+    }
+    
+    .practice-label {
+      font-weight: 500;
+      color: #212529;
+      margin-bottom: 0;
+      cursor: pointer;
+      user-select: none;
+      flex: 1;
+    }
+    
+    .all-employees-item {
+      border-bottom: 2px solid #dee2e6;
+      margin-bottom: 0.5rem;
+      padding-bottom: 0.75rem;
+    }
+    
+    .all-employees-item .practice-label {
+      color: #0d6efd;
+      font-weight: 600;
+    }
+    
+    .practice-tag {
+      background-color: #e7f3ff;
+      border: 1px solid #0d6efd;
+      color: #0d6efd;
+      padding: 0.25rem 0.5rem;
+      border-radius: 0.375rem;
+      font-size: 0.875rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+    }
+    
+    .practice-tag .remove-practice {
+      background: none;
+      border: none;
+      color: #0d6efd;
+      font-size: 1rem;
+      line-height: 1;
+      padding: 0;
+      cursor: pointer;
+    }
+    
+    .practice-tag .remove-practice:hover {
+      color: #dc3545;
+    }
+    
+    /* Animation for dropdown */
+    .practice-checkbox-container {
+      animation: slideDown 0.2s ease-out;
+    }
+    
+    @keyframes slideDown {
+      from {
+        opacity: 0;
+        transform: translateY(-10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    
+    /* Responsive improvements */
+    @media (max-width: 768px) {
+      .practice-dropdown-container {
+        width: 100%;
+      }
+      
+      .practice-checkbox-container {
+        max-height: 180px;
+      }
+    }
+    
+    /* Select2 Custom Styling for Bootstrap Integration */
+    .select2-container--bootstrap-5 .select2-selection {
+      border: 1px solid #ced4da !important;
+      border-radius: 0.375rem !important;
+      min-height: calc(1.5em + 0.75rem + 2px) !important;
+    }
+    
+    .select2-container--bootstrap-5 .select2-selection--single {
+      height: calc(1.5em + 0.75rem + 2px) !important;
+    }
+    
+    .select2-container--bootstrap-5 .select2-selection--single .select2-selection__rendered {
+      padding: 0.375rem 0.75rem !important;
+      line-height: 1.5 !important;
+      color: #212529 !important;
+      display: flex !important;
+      align-items: center !important;
+      width: 100% !important;
+      height: 100% !important;
+      overflow: hidden !important;
+      text-overflow: ellipsis !important;
+      white-space: nowrap !important;
+    }
+    
+    .select2-container--bootstrap-5 .select2-selection--single .select2-selection__arrow {
+      height: calc(1.5em + 0.75rem) !important;
+      right: 0.75rem !important;
+    }
+    
+    .select2-container--bootstrap-5.select2-container--focus .select2-selection {
+      border-color: #86b7fe !important;
+      box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25) !important;
+    }
+    
+    /* Ensure clear button (X) is positioned correctly */
+    .select2-container--bootstrap-5 .select2-selection--single .select2-selection__clear {
+      position: absolute !important;
+      right: 2rem !important;
+      top: 50% !important;
+      transform: translateY(-50%) !important;
+      font-size: 1.2rem !important;
+      color: #6c757d !important;
+      cursor: pointer !important;
+      z-index: 2 !important;
+    }
+    
+    .select2-container--bootstrap-5 .select2-selection--single .select2-selection__clear:hover {
+      color: #dc3545 !important;
+    }
+    
+    /* Enhanced dropdown styling for better search experience */
+    .select2-container--bootstrap-5 .select2-dropdown {
+      border: 1px solid #dee2e6 !important;
+      border-radius: 0.375rem !important;
+      box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+    }
+    
+    .select2-container--bootstrap-5 .select2-results__option {
+      padding: 0.625rem 1rem !important;
+      font-size: 0.875rem !important;
+      line-height: 1.4 !important;
+      transition: background-color 0.2s ease !important;
+      display: flex !important;
+      align-items: center !important;
+      min-height: 2.75rem !important;
+      border-bottom: 1px solid #f1f3f4 !important;
+      font-weight: 400 !important;
+      color: #212529 !important;
+    }
+    
+    .select2-container--bootstrap-5 .select2-results__option:last-child {
+      border-bottom: none !important;
+    }
+    
+    .select2-container--bootstrap-5 .select2-results__option--highlighted {
+      background-color: #0d6efd !important;
+      color: white !important;
+    }
+    
+    .select2-search--dropdown .select2-search__field {
+      border: 1px solid #ced4da !important;
+      border-radius: 0.375rem !important;
+      padding: 0.375rem 0.75rem !important;
+      margin-bottom: 0.5rem !important;
+      font-size: 0.875rem !important;
+      background-color: #f8f9fa !important;
+      transition: all 0.2s ease !important;
+    }
+    
+    .select2-search--dropdown .select2-search__field::placeholder {
+      color: #6c757d !important;
+      font-style: italic !important;
+    }
+    
+    .select2-search--dropdown .select2-search__field:focus {
+      border-color: #86b7fe !important;
+      box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25) !important;
+      outline: none !important;
+      background-color: #fff !important;
+    }
+    
+    /* Improve selection appearance */
+    .select2-container--bootstrap-5 .select2-selection--single {
+      cursor: pointer !important;
+      transition: all 0.2s ease !important;
+    }
+    
+    .select2-container--bootstrap-5 .select2-selection--single:hover {
+      border-color: #86b7fe !important;
+    }
+    
+    .project-select2 {
+      width: 100% !important;
+    }
+  </style>
+</head>
+<body class="bg-light">
+
+<div class="container mt-5">
+  <h2 class="mb-4 text-center" style="color: #1976d2; font-weight: 700;">Manager Allocate Resources</h2>
+
+  <div id="loading-status" class="mb-3 text-secondary"></div>
+
+  <form action="/dashboard/manager/schedule" method="POST" class="card p-4 shadow-sm bg-white">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+    <!-- Warning Alert -->
+    <div id="validationWarning" class="alert alert-danger d-none mb-3" role="alert"></div>
+
+    <!-- Employee selection -->
+    <div class="form-section">
+      <div class="row align-items-end mb-2">
+        <div class="col-md-12">
+          <div class="d-flex flex-wrap align-items-center gap-4">
+            <div class="flex-grow-1" style="min-width:260px;">
+              <label for="practice-selection" class="form-label mb-1"><strong>Select Practice(s):</strong></label>
+              <div class="practice-dropdown-container">
+                <!-- Dropdown Toggle Button -->
+                <div class="practice-dropdown-toggle" onclick="togglePracticeDropdown()">
+                  <span id="practice-selection-display" class="practice-selection-text">
+                    Click to select practices...
+                  </span>
+                  <span class="practice-dropdown-arrow">▼</span>
+                </div>
+                
+                <!-- Dropdown Menu -->
+                <div class="practice-checkbox-container" id="practice-dropdown-menu">
+                  <!-- All Employees Option -->
+                  <div class="practice-item all-employees-item" onclick="togglePracticeItem(this, event);">
+                    <input class="form-check-input practice-checkbox" type="checkbox" 
+                           name="practice_filter" value="all_employees" 
+                           id="practice-all-employees" onchange="onAllEmployeesChangeFromCheckbox(this)" 
+                           onclick="event.stopPropagation();">
+                    <label class="practice-label" for="practice-all-employees">
+                      All Employees
+                    </label>
+                  </div>
+                  
+                  <!-- Individual Practices -->
+                  <div id="practice-items-container">
+                    <% practices.forEach(practice => { %>
+                      <div class="practice-item" onclick="togglePracticeItem(this, event);" data-practice="<%= practice.toLowerCase() %>">
+                        <input class="form-check-input practice-checkbox" type="checkbox" 
+                               name="practice_filter" value="<%= practice %>" 
+                               id="practice-<%= practice.replace(/\s+/g, '-') %>" 
+                               onchange="onPracticeChangeFromCheckbox(this)" 
+                               onclick="event.stopPropagation();">
+                        <label class="practice-label" for="practice-<%= practice.replace(/\s+/g, '-') %>">
+                           <%= practice %>
+                        </label>
+                      </div>
+                    <% }) %>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Selected Practices Tags Display -->
+              <div id="selected-practices-display" class="mt-2" style="display: none;">
+                <div class="mb-1">
+                  <label class="form-label mb-0"><small><strong>Selected:</strong></small></label>
+                </div>
+                <div id="selected-practices-tags" class="d-flex flex-wrap gap-1"></div>
+              </div>
+              
+              <div class="mt-1">
+                <span id="practice-count" class="text-info small"></span>
+              </div>
+              
+              <!-- <small class="text-muted">Select practices to filter employees. Click on practice names to select/deselect them.</small> -->
+            </div>
+            <!-- <div class="flex-grow-1" style="min-width:260px; margin-top: 1.7rem;">
+              <label for="employee-search" class="form-label mb-1"><strong>Search Employees:</strong></label>
+              <input id="employee-search" type="text" class="form-control form-control-sm" style="max-width: 600px;" placeholder="🔍 Search employees..." oninput="onEmployeeSearch()">
+            </div> -->
+          </div>
+        </div>
+      </div>
+      <label class="form-label"><strong>Select Employees:</strong></label>
+      <div id="employee-checkboxes" class="border rounded p-3 bg-light" style="max-height: 200px; overflow-y: auto;">
+        <!-- Employee checkboxes will be rendered here by JS -->
+      </div>
+    </div>
+
+    <!-- Selected employee details -->
+    <div class="form-section">
+      <table id="employee-table" class="table table-bordered table-striped mt-3" style="display:none;">
+        <thead class="table-primary">
+          <tr>
+            <th>Emp ID</th>
+            <th>Name</th>
+            <th>Payroll Company</th>
+            <th>Division</th>
+            <th>Home Practice</th>
+            <th>Practice Manager</th>
+            <th>Current Allocations</th>
+          </tr>
+        </thead>
+        <tbody id="employee-table-body"></tbody>
+      </table>
+    </div>
+
+    <!-- Project(s) allocation -->
+    <div class="form-section" id="project-allocation-section">
+      <!-- Dynamic project rows will be inserted here -->
+    </div>
+
+    <!-- Date range -->
+    <div class="row form-section">
+      <div class="col-md-6">
+        <label for="start_date" class="form-label">From:</label>
+        <input type="date" name="start_date" id="start_date" class="form-control" required onchange="validateDateRange()">
+      </div>
+      <div class="col-md-6">
+        <label for="end_date" class="form-label">To:</label>
+        <input type="date" name="end_date" id="end_date" class="form-control" required onchange="validateDateRange()">
+        <div id="date-warning" class="text-danger small mt-1" style="display:none;"></div>
+      </div>
+    </div>
+
+    <!-- Submit button -->
+    <div class="text-center mt-4">
+      <button type="button" class="btn btn-outline-info me-2" onclick="checkConflictsManually()">
+        🔍 Check Conflicts
+      </button>
+      <button type="submit" class="btn btn-success px-5">
+        ✅ Done
+      </button>
+    </div>
+  </form>
+</div>
+
+<!-- ✅ JavaScript -->
+<script>
+  // Employees data for filtering (injected from server)
+  const allEmployees = <%- JSON.stringify(employees) %>;
+
+  // Dropdown toggle functionality
+  function togglePracticeDropdown() {
+    const dropdown = document.getElementById('practice-dropdown-menu');
+    const toggle = document.querySelector('.practice-dropdown-toggle');
+    
+    if (dropdown.classList.contains('show')) {
+      dropdown.classList.remove('show');
+      toggle.classList.remove('open');
+    } else {
+      dropdown.classList.add('show');
+      toggle.classList.add('open');
+    }
+  }
+
+  // Close dropdown when clicking outside
+  document.addEventListener('click', function(event) {
+    const container = document.querySelector('.practice-dropdown-container');
+    if (!container.contains(event.target)) {
+      document.getElementById('practice-dropdown-menu').classList.remove('show');
+      document.querySelector('.practice-dropdown-toggle').classList.remove('open');
+    }
+  });
+
+  // Update dropdown display text
+  function updateDropdownDisplay() {
+    const allEmployeesCheckbox = document.querySelector('input[value="all_employees"]');
+    const practiceCheckboxes = document.querySelectorAll('input[name="practice_filter"]:not([value="all_employees"]):checked');
+    const selectedPractices = Array.from(practiceCheckboxes).map(checkbox => checkbox.value);
+    const displayElement = document.getElementById('practice-selection-display');
+    
+    if (allEmployeesCheckbox.checked) {
+      displayElement.innerHTML = `
+        <span style="color: #212529; font-weight: 500;">✨ All Employees</span>
+        <span class="practice-selection-count">All</span>
+      `;
+    } else if (selectedPractices.length === 0) {
+      displayElement.innerHTML = '<span class="practice-selection-text">Click to select practices...</span>';
+    } else if (selectedPractices.length === 1) {
+      displayElement.innerHTML = `
+        <span style="color: #212529; font-weight: 500;">📋 ${selectedPractices[0]}</span>
+        <span class="practice-selection-count">1</span>
+      `;
+    } else {
+      displayElement.innerHTML = `
+        <span style="color: #212529; font-weight: 500;">${selectedPractices.length} practices selected</span>
+        <span class="practice-selection-count">${selectedPractices.length}</span>
+      `;
+    }
+  }
+
+  // Toggle practice item visual selection
+  function togglePracticeItem(item, event) {
+    if (event) {
+      // Don't handle if the click was on the label (let native label behavior work)
+      if (event.target.classList.contains('practice-label')) {
+        return;
+      }
+      event.stopPropagation();
+    }
+    
+    const checkbox = item.querySelector('input[type="checkbox"]');
+    const isChecked = checkbox.checked;
+    
+    // Toggle checkbox state
+    checkbox.checked = !isChecked;
+    
+    // Update visual state
+    if (checkbox.checked) {
+      item.classList.add('selected');
+    } else {
+      item.classList.remove('selected');
+    }
+    
+    // Trigger the appropriate change handler
+    if (checkbox.value === 'all_employees') {
+      onAllEmployeesChange();
+    } else {
+      onPracticeChange();
+    }
+    
+    // Update dropdown display
+    updateDropdownDisplay();
+  }
+
+  // Handle direct checkbox changes for All Employees
+  function onAllEmployeesChangeFromCheckbox(checkbox) {
+    const item = checkbox.closest('.practice-item');
+    
+    // Update visual state
+    if (checkbox.checked) {
+      item.classList.add('selected');
+    } else {
+      item.classList.remove('selected');
+    }
+    
+    onAllEmployeesChange();
+    updateDropdownDisplay();
+  }
+
+  // Handle direct checkbox changes for individual practices
+  function onPracticeChangeFromCheckbox(checkbox) {
+    const item = checkbox.closest('.practice-item');
+    
+    // Update visual state
+    if (checkbox.checked) {
+      item.classList.add('selected');
+    } else {
+      item.classList.remove('selected');
+    }
+    
+    onPracticeChange();
+    updateDropdownDisplay();
+  }
+
+  // Update visual selection states based on checkbox states
+  function updatePracticeVisualStates() {
+    const practiceItems = document.querySelectorAll('.practice-item');
+    practiceItems.forEach(item => {
+      const checkbox = item.querySelector('input[type="checkbox"]');
+      if (checkbox.checked) {
+        item.classList.add('selected');
+      } else {
+        item.classList.remove('selected');
+      }
+    });
+  }
+
+  // Handle "All Employees" checkbox change
+  function onAllEmployeesChange() {
+    const allEmployeesCheckbox = document.querySelector('input[value="all_employees"]');
+    const practiceCheckboxes = document.querySelectorAll('input[name="practice_filter"]:not([value="all_employees"])');
+    
+    if (allEmployeesCheckbox.checked) {
+      // If "All Employees" is checked, uncheck all specific practices
+      practiceCheckboxes.forEach(checkbox => {
+        checkbox.checked = false;
+        const item = checkbox.closest('.practice-item');
+        if (item) item.classList.remove('selected');
+      });
+    }
+    
+    updatePracticeVisualStates();
+    updateDropdownDisplay();
+    onPracticeChange();
+  }
+
+  // Update practice selection display
+  function updatePracticeSelectionDisplay() {
+    const allEmployeesCheckbox = document.querySelector('input[value="all_employees"]');
+    const practiceCheckboxes = document.querySelectorAll('input[name="practice_filter"]:not([value="all_employees"]):checked');
+    const selectedPractices = Array.from(practiceCheckboxes).map(checkbox => checkbox.value);
+    
+    // Update visual states
+    updatePracticeVisualStates();
+  }
+
+  // Update selected practices display with tags
+  function updateSelectedPracticesDisplay() {
+    const allEmployeesCheckbox = document.querySelector('input[value="all_employees"]');
+    const practiceCheckboxes = document.querySelectorAll('input[name="practice_filter"]:not([value="all_employees"]):checked');
+    const selectedPractices = Array.from(practiceCheckboxes).map(checkbox => checkbox.value);
+    const displayContainer = document.getElementById('selected-practices-display');
+    const tagsContainer = document.getElementById('selected-practices-tags');
+    
+    if (allEmployeesCheckbox.checked) {
+      // Show "All Employees" tag
+      displayContainer.style.display = 'block';
+      tagsContainer.innerHTML = `
+        <span class="practice-tag" style="background-color: #d1ecf1; border-color: #bee5eb; color: #0c5460;">
+          All Employees
+          <button type="button" class="remove-practice" onclick="removeAllEmployees()" title="Remove All Employees">
+            ×
+          </button>
+        </span>
+      `;
+    } else if (selectedPractices.length === 0) {
+      displayContainer.style.display = 'none';
+    } else {
+      displayContainer.style.display = 'block';
+      tagsContainer.innerHTML = '';
+      
+      selectedPractices.forEach(practice => {
+        const tag = document.createElement('span');
+        tag.className = 'practice-tag';
+        tag.innerHTML = `
+          ${practice}
+          <button type="button" class="remove-practice" onclick="removePractice('${practice}')" title="Remove ${practice}">
+            ×
+          </button>
+        `;
+        tagsContainer.appendChild(tag);
+      });
+    }
+  }
+
+  // Remove a specific practice
+  function removePractice(practiceValue) {
+    const checkbox = document.querySelector(`input[name="practice_filter"][value="${practiceValue}"]`);
+    if (checkbox) {
+      checkbox.checked = false;
+      onPracticeChange();
+    }
+  }
+
+  // Remove "All Employees" selection
+  function removeAllEmployees() {
+    const allEmployeesCheckbox = document.querySelector('input[value="all_employees"]');
+    if (allEmployeesCheckbox) {
+      allEmployeesCheckbox.checked = false;
+      onPracticeChange();
+    }
+  }
+
+  // Date validation function
+  function validateDateRange() {
+    const startDate = document.getElementById('start_date').value;
+    const endDate = document.getElementById('end_date').value;
+    const warningDiv = document.getElementById('date-warning');
+    const submitBtn = document.querySelector('button[type="submit"]');
+    
+    if (startDate && endDate) {
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+      
+      if (end < start) {
+        warningDiv.textContent = 'End date must be on or after the start date.';
+        warningDiv.style.display = 'block';
+        submitBtn.disabled = true;
+        return false;
+      } else {
+        warningDiv.textContent = '';
+        warningDiv.style.display = 'none';
+        // Re-enable submit button only if no other validation errors
+        const hasHoursError = document.querySelector('.hours-warning[style*="block"]');
+        const hasValidationError = !document.getElementById('validationWarning').classList.contains('d-none');
+        submitBtn.disabled = hasHoursError || hasValidationError;
+        return true;
+      }
+    }
+    return true;
+  }
+
+  // Render employee checkboxes for selected practices
+  function renderEmployeeCheckboxes(selectedPractices, searchTerm = '') {
+    const container = document.getElementById('employee-checkboxes');
+    container.innerHTML = '';
+    let filtered = [];
+    
+    if (!selectedPractices || selectedPractices.length === 0) {
+      // No practices selected (including "All Employees"), show all employees in original order
+      filtered = allEmployees;
+    } else {
+      // Filter employees by selected practices
+      filtered = allEmployees.filter(emp => 
+        selectedPractices.includes(emp.homePractice)
+      );
+    }
+    
+    if (searchTerm) {
+      const term = searchTerm.trim().toLowerCase();
+      filtered = filtered.filter(emp =>
+        emp.empCode.toLowerCase().includes(term) ||
+        (emp.name && emp.name.toLowerCase().includes(term))
+      );
+    }
+    
+    if (!filtered.length) {
+      container.innerHTML = '<div class="text-muted">No employees found for this filter.</div>';
+      return;
+    }
+    
+    // Check if "All Employees" is selected or no specific practices are selected
+    const allEmployeesCheckbox = document.querySelector('input[value="all_employees"]');
+    const showAllEmployees = (allEmployeesCheckbox && allEmployeesCheckbox.checked) || selectedPractices.length === 0;
+    
+    if (showAllEmployees) {
+      // Show all employees in their original order without grouping
+      filtered.forEach(emp => {
+        const div = document.createElement('div');
+        div.className = 'form-check';
+        div.innerHTML = `
+          <input class="form-check-input" type="checkbox" name="emp_ids" value="${emp.empCode}" onchange="onEmployeeSelection()">
+          <label class="form-check-label">${emp.empCode} - ${emp.name}</label>
+        `;
+        container.appendChild(div);
+      });
+    } else {
+      // Group employees by practice for better organization (only when specific practices are selected)
+      const groupedEmployees = {};
+      filtered.forEach(emp => {
+        const practice = emp.homePractice || 'No Practice';
+        if (!groupedEmployees[practice]) {
+          groupedEmployees[practice] = [];
+        }
+        groupedEmployees[practice].push(emp);
+      });
+      
+      // Render grouped employees
+      Object.keys(groupedEmployees).sort().forEach(practice => {
+        if (selectedPractices && selectedPractices.length > 1) {
+          // Show practice headers when multiple practices are selected
+          const practiceHeader = document.createElement('div');
+          practiceHeader.className = 'fw-bold text-primary mt-2 mb-1';
+          practiceHeader.textContent = practice;
+          container.appendChild(practiceHeader);
+        }
+        
+        groupedEmployees[practice].forEach(emp => {
+          const div = document.createElement('div');
+          div.className = 'form-check';
+          div.innerHTML = `
+            <input class="form-check-input" type="checkbox" name="emp_ids" value="${emp.empCode}" onchange="onEmployeeSelection()">
+            <label class="form-check-label">${emp.empCode} - ${emp.name}</label>
+          `;
+          container.appendChild(div);
+        });
+      });
+    }
+  }
+
+  // Handle employee search input
+  function onEmployeeSearch() {
+    const allEmployeesCheckbox = document.querySelector('input[value="all_employees"]');
+    const practiceCheckboxes = document.querySelectorAll('input[name="practice_filter"]:not([value="all_employees"]):checked');
+    const selectedPractices = Array.from(practiceCheckboxes).map(checkbox => checkbox.value);
+    const searchTerm = document.getElementById('employee-search').value;
+    
+    // Determine what to show based on selection
+    let employeesToShow = [];
+    if (allEmployeesCheckbox.checked) {
+      employeesToShow = []; // Empty array means show all employees
+    } else {
+      employeesToShow = selectedPractices;
+    }
+    
+    renderEmployeeCheckboxes(employeesToShow, searchTerm);
+  }
+
+  // On practice checkbox change
+  function onPracticeChange() {
+    const allEmployeesCheckbox = document.querySelector('input[value="all_employees"]');
+    const practiceCheckboxes = document.querySelectorAll('input[name="practice_filter"]:not([value="all_employees"]):checked');
+    const selectedPractices = Array.from(practiceCheckboxes).map(checkbox => checkbox.value);
+    const searchTerm = document.getElementById('employee-search') ? document.getElementById('employee-search').value : '';
+    
+    // If any specific practice is selected, uncheck "All Employees"
+    if (selectedPractices.length > 0 && allEmployeesCheckbox.checked) {
+      allEmployeesCheckbox.checked = false;
+      const allEmployeesItem = allEmployeesCheckbox.closest('.practice-item');
+      if (allEmployeesItem) allEmployeesItem.classList.remove('selected');
+    }
+    
+    // Determine what to show
+    let employeesToShow = [];
+    if (allEmployeesCheckbox.checked) {
+      employeesToShow = []; // Empty array means show all employees
+    } else {
+      employeesToShow = selectedPractices;
+    }
+    
+    // Update visual states and displays
+    updatePracticeSelectionDisplay();
+    updateSelectedPracticesDisplay();
+    updateDropdownDisplay();
+    
+    // Update practice count display
+    // const countElement = document.getElementById('practice-count');
+    // if (allEmployeesCheckbox.checked) {
+    //   countElement.textContent = '(All employees shown)';
+    // } else if (selectedPractices.length === 0) {
+    //   countElement.textContent = '(All practices shown)';
+    // } else {
+    //   countElement.textContent = `(${selectedPractices.length} practice${selectedPractices.length > 1 ? 's' : ''} selected)`;
+    // }
+    
+    renderEmployeeCheckboxes(employeesToShow, searchTerm);
+    // Clear employee table and project allocation section
+    fetchEmployeeDetails([]);
+    document.getElementById('project-allocation-section').innerHTML = '';
+  }
+
+  // Helper: fetch and show selected employee details
+  async function fetchEmployeeDetails(selected) {
+    const tbody = document.getElementById('employee-table-body');
+    const table = document.getElementById('employee-table');
+    const loading = document.getElementById('loading-status');
+    tbody.innerHTML = '';
+    table.style.display = selected.length ? 'table' : 'none';
+    if (!selected.length) return;
+    loading.textContent = 'Fetching employee details...';
+    
+    // Get date range for allocation checking
+    const startDate = document.getElementById('start_date').value;
+    const endDate = document.getElementById('end_date').value;
+    let allocationsInfo = {};
+    
+    // Fetch current allocations if dates are set
+    if (startDate && endDate) {
+      try {
+        const allocResponse = await fetch('/api/check-assignments', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            empCodes: selected,
+            startDate: startDate,
+            endDate: endDate
+          })
+        });
+        if (allocResponse.ok) {
+          allocationsInfo = await allocResponse.json();
+        }
+      } catch (error) {
+        console.error('Error fetching allocations:', error);
+      }
+    }
+    
+    for (const empCode of selected) {
+      try {
+        const res = await fetch(`/api/employee/${empCode}`);
+        if (!res.ok) throw new Error();
+        const emp = await res.json();
+        
+        // Calculate allocation summary
+        let allocationSummary = 'Select dates to view';
+        if (allocationsInfo[empCode]) {
+          const totalDays = Object.keys(allocationsInfo[empCode]).length;
+          const allocatedDays = Object.values(allocationsInfo[empCode])
+            .filter(dayInfo => dayInfo.totalHours > 0).length;
+          const maxHours = Math.max(...Object.values(allocationsInfo[empCode])
+            .map(dayInfo => dayInfo.totalHours));
+          
+          if (allocatedDays === 0) {
+            allocationSummary = `<span class="text-success">Available (${totalDays} days)</span>`;
+          } else {
+            const avgHours = Object.values(allocationsInfo[empCode])
+              .reduce((sum, dayInfo) => sum + dayInfo.totalHours, 0) / totalDays;
+            
+            if (maxHours >= 8) {
+              allocationSummary = `<span class="text-danger">⚠️ Fully allocated on some days (max: ${maxHours}h)</span>`;
+            } else if (avgHours >= 6) {
+              allocationSummary = `<span class="text-warning">Mostly allocated (avg: ${avgHours.toFixed(1)}h)</span>`;
+            } else {
+              allocationSummary = `<span class="text-info">Partially allocated (avg: ${avgHours.toFixed(1)}h)</span>`;
+            }
+          }
+        }
+        
+        const row = `
+          <tr>
+            <td>${empCode}</td>
+            <td>${emp.name || ''}</td>
+            <td>${emp.payrollCompany || ''}</td>
+            <td>${emp.division || ''}</td>
+            <td>${emp.practice || ''}</td>
+            <td>${emp.practiceHead || ''}</td>
+            <td>${allocationSummary}</td>
+          </tr>`;
+        tbody.insertAdjacentHTML('beforeend', row);
+      } catch {
+        alert(`Failed to fetch employee: ${empCode}`);
+      }
+    }
+    loading.textContent = '';
+  }
+
+  // UI logic for project allocation
+  function onEmployeeSelection() {
+    const selected = Array.from(document.querySelectorAll('input[name="emp_ids"]:checked')).map(cb => cb.value);
+    fetchEmployeeDetails(selected);
+    const section = document.getElementById('project-allocation-section');
+    section.innerHTML = '';
+    if (!selected.length) return;
+
+
+    // For both single and multiple employees, allow multiple project selection and submit as arrays
+    section.innerHTML = `<label class='form-label'><strong>Allocate Project(s):</strong></label>
+      <div id='project-rows'></div>
+      <button type='button' class='btn btn-outline-primary btn-sm mt-2' onclick='addProjectRow()'>➕ Add Project</button>`;
+    addProjectRow();
+    // Enable validation on all initial inputs
+    setTimeout(() => {
+      document.querySelectorAll('.hours-input').forEach(inp => {
+        inp.oninput = function() { validateHoursInput(this); };
+      });
+      // Ensure Select2 is initialized on the first project dropdown
+      const firstSelect = document.querySelector('.project-select2');
+      if (firstSelect && !window.jQuery(firstSelect).hasClass('select2-hidden-accessible')) {
+        initializeSelect2('#' + firstSelect.id);
+      }
+    }, 100);
+  }
+
+  // Add a new project row for single employee allocation
+  function addProjectRow() {
+    const container = document.getElementById('project-rows');
+    const idx = container ? container.children.length : 0;
+    const selectId = `project-select-${idx}-${Date.now()}`; // Unique ID for each dropdown
+    const row = document.createElement('div');
+    row.className = 'row mb-2';
+    row.innerHTML = `
+      <div class='col-md-6'>
+        <select id='${selectId}' name='project_ids[]' class='form-select project-select2' required>
+          <option value=''>-- Select Project --</option>
+          <% projects.forEach(project => { %>
+            <option value='<%= project._id %>'>
+              <%= project.projectName %> 
+            </option>
+          <% }) %>
+        </select>
+      </div>
+      <div class='col-md-3'>
+        <input type='number' name='hours_list[]' class='form-control hours-input' min='0.5' max='8' step='0.5' placeholder='Hours (0.5-8)' required oninput='validateHoursInput(this)'>
+        <div class='text-danger small hours-warning' style='display:none;'></div>
+      </div>
+      <div class='col-md-2'>
+        <button type='button' class='btn btn-outline-danger btn-sm' onclick='removeProjectRow(this)'>🗑</button>
+      </div>
+    `;
+    container.appendChild(row);
+    
+    // Initialize Select2 on the newly added dropdown
+    initializeSelect2(`#${selectId}`);
+  }
+
+  // Function to remove project row and clean up Select2
+  function removeProjectRow(button) {
+    const row = button.closest('.row');
+    const select = row.querySelector('select');
+    
+    // Destroy Select2 instance before removing the element
+    if (select && typeof window.jQuery !== 'undefined' && window.jQuery(select).hasClass('select2-hidden-accessible')) {
+      try {
+        window.jQuery(select).select2('destroy');
+      } catch (error) {
+        console.warn('Failed to destroy Select2 instance:', error);
+      }
+    }
+    
+    row.remove();
+  }
+
+  // Function to initialize Select2 on a specific selector
+  function initializeSelect2(selector) {
+    // Wait for jQuery and Select2 to be available
+    if (typeof window.jQuery !== 'undefined' && window.jQuery.fn.select2) {
+      try {
+        const $element = window.jQuery(selector);
+        
+        // Check if Select2 is already initialized
+        if ($element.hasClass('select2-hidden-accessible')) {
+          return; // Already initialized
+        }
+        
+        $element.select2({
+          theme: 'bootstrap-5',
+          placeholder: '-- Select Project --',
+          allowClear: true,
+          width: '100%',
+          dropdownAutoWidth: true,
+          // Ensure single selection mode
+          multiple: false,
+          // Enable search on focus - when you click the dropdown, search box gets focus
+          selectOnClose: false,
+          // Open dropdown immediately when focused
+          openOnEnter: true,
+          // Disable tags mode
+          tags: false,
+          language: {
+            noResults: function() {
+              return "No projects found";
+            },
+            searching: function() {
+              return "Searching projects...";
+            },
+            inputTooShort: function() {
+              return "Start typing to search projects...";
+            }
+          },
+          // Ensure search is always enabled and visible
+          minimumResultsForSearch: 0,
+          // Custom search matcher for better filtering
+          matcher: function(params, data) {
+            // If there are no search terms, return all data
+            if ($.trim(params.term) === '') {
+              return data;
+            }
+            
+            // Check if the text contains the search term (case insensitive)
+            if (data.text.toLowerCase().indexOf(params.term.toLowerCase()) > -1) {
+              return data;
+            }
+            
+            // Return null if the term doesn't match
+            return null;
+          }
+        });
+
+        // Auto-focus search when dropdown opens
+        $element.on('select2:open', function () {
+          setTimeout(function() {
+            const searchField = document.querySelector('.select2-search__field');
+            if (searchField) {
+              searchField.focus();
+              searchField.setAttribute('placeholder', 'Start typing to search projects...');
+            }
+          }, 100);
+        });
+
+        // Clear search when dropdown closes
+        $element.on('select2:close', function () {
+          setTimeout(function() {
+            const searchField = document.querySelector('.select2-search__field');
+            if (searchField) {
+              searchField.value = '';
+            }
+          }, 100);
+        });
+
+        // Add keyboard support for better UX
+        $element.on('select2:opening', function () {
+          // Store original selection for potential restoration
+          const currentSelection = $element.val();
+          $element.data('original-selection', currentSelection);
+        });
+      } catch (error) {
+        console.warn('Failed to initialize Select2:', error);
+        // Fallback: retry after delay
+        setTimeout(() => initializeSelect2(selector), 200);
+      }
+    } else {
+      // Retry after a short delay if libraries aren't loaded yet
+      setTimeout(() => initializeSelect2(selector), 100);
+    }
+  }
+
+  // Real-time validation for hours input (single employee mode)
+  function validateHoursInput(input) {
+    const value = Number(input.value);
+    const warningDiv = input.parentElement.querySelector('.hours-warning');
+    let valid = true;
+    let msg = '';
+    if (isNaN(value) || value < 0.5 || value > 8 || (value * 2) % 1 !== 0) {
+      valid = false;
+      msg = 'Hours must be between 0.5 and 8 in increments of 0.5 (e.g., 1, 1.5, 2, 2.5).';
+    }
+    // Sum validation for all project rows
+    if (valid) {
+      const allInputs = document.querySelectorAll('.hours-input');
+      let total = 0;
+      allInputs.forEach(inp => {
+        const v = Number(inp.value);
+        if (!isNaN(v)) total += v;
+      });
+      // For multiple employees, total hours per employee per day must be 0.5-8 (same as single)
+      if (total < 0.5 || total > 8) {
+        valid = false;
+        msg = 'Total hours per employee per day (across all projects) must be between 0.5 and 8.';
+      }
+    }
+    if (!valid) {
+      warningDiv.textContent = msg;
+      warningDiv.style.display = 'block';
+      document.getElementById('validationWarning').textContent = msg;
+      document.getElementById('validationWarning').classList.remove('d-none');
+    } else {
+      warningDiv.textContent = '';
+      warningDiv.style.display = 'none';
+      document.getElementById('validationWarning').textContent = '';
+      document.getElementById('validationWarning').classList.add('d-none');
+    }
+    // Block submit if invalid
+    const hasDateError = !validateDateRange();
+    document.querySelector('button[type="submit"]').disabled = !valid || hasDateError;
+  }
+
+  // Real-time validation for multi-employee mode
+  function validateMultiEmpHours(input) {
+    const value = Number(input.value);
+    const warningDiv = input.parentElement.querySelector('.hours-warning');
+    let valid = true;
+    let msg = '';
+    if (isNaN(value) || value < 0.5 || value > 8 || (value * 2) % 1 !== 0) {
+      valid = false;
+      msg = 'Hours must be between 0.5 and 8 in increments of 0.5 (e.g., 1, 1.5, 2, 2.5).';
+    }
+    if (!valid) {
+      warningDiv.textContent = msg;
+      warningDiv.style.display = 'block';
+      document.getElementById('validationWarning').textContent = msg;
+      document.getElementById('validationWarning').classList.remove('d-none');
+    } else {
+      warningDiv.textContent = '';
+      warningDiv.style.display = 'none';
+      document.getElementById('validationWarning').textContent = '';
+      document.getElementById('validationWarning').classList.add('d-none');
+    }
+    const hasDateError = !validateDateRange();
+    document.querySelector('button[type="submit"]').disabled = !valid || hasDateError;
+  }
+
+  // Check for allocation conflicts before form submission
+  async function checkAllocationConflicts() {
+    const selected = Array.from(document.querySelectorAll('input[name="emp_ids"]:checked')).map(cb => cb.value);
+    const startDate = document.getElementById('start_date').value;
+    const endDate = document.getElementById('end_date').value;
+
+    if (!selected.length || !startDate || !endDate) {
+      return { hasConflicts: false, message: '' };
+    }
+
+    // Calculate total hours being allocated per day
+    const projectRows = document.querySelectorAll('#project-rows .row');
+    let totalNewHours = 0;
+    
+    projectRows.forEach(row => {
+      const hoursInput = row.querySelector('input[name="hours_list[]"]');
+      if (hoursInput && hoursInput.value) {
+        totalNewHours += Number(hoursInput.value);
+      }
+    });
+
+    if (totalNewHours === 0) {
+      return { hasConflicts: false, message: '' };
+    }
+
+    try {
+      const response = await fetch('/api/check-assignments', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          empCodes: selected,
+          startDate: startDate,
+          endDate: endDate
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to check assignments');
+      }
+
+      const allocations = await response.json();
+      const conflicts = [];
+
+      // Check each employee for conflicts
+      selected.forEach(empCode => {
+        if (allocations[empCode]) {
+          Object.keys(allocations[empCode]).forEach(date => {
+            const existingHours = allocations[empCode][date].totalHours;
+            const newTotal = existingHours + totalNewHours;
+            
+            if (newTotal > 8) {
+              const assignments = allocations[empCode][date].assignments;
+              const projectList = assignments.length > 0 
+                ? assignments.map(a => `${a.projectName} (${a.hours}h)`).join(', ')
+                : 'No projects';
+              
+              conflicts.push({
+                empCode,
+                date,
+                existingHours,
+                newHours: totalNewHours,
+                newTotal,
+                existingAssignments: projectList
+              });
+            }
+          });
+        }
+      });
+
+      if (conflicts.length > 0) {
+        let message = '⚠️ Allocation Conflicts Detected:\n\n';
+        conflicts.forEach(conflict => {
+          message += `• Employee ${conflict.empCode} on ${conflict.date}:\n`;
+          message += `  Current: ${conflict.existingHours}h (${conflict.existingAssignments})\n`;
+          message += `  Adding: ${conflict.newHours}h\n`;
+          message += `  Total: ${conflict.newTotal}h (exceeds 8-hour limit)\n\n`;
+        });
+        message += 'Please adjust the hours or select different dates to avoid conflicts.';
+        
+        return { hasConflicts: true, message };
+      }
+
+      return { hasConflicts: false, message: '' };
+
+    } catch (error) {
+      console.error('Error checking conflicts:', error);
+      return { hasConflicts: false, message: 'Unable to validate conflicts. Please try again.' };
+    }
+  }
+
+  // Form submission handler with conflict checking
+  document.addEventListener('DOMContentLoaded', function() {
+    // Initialize practice count display and visual states
+   // document.getElementById('practice-count').textContent = '(All practices shown)';
+    updatePracticeSelectionDisplay();
+    updateSelectedPracticesDisplay();
+    updatePracticeVisualStates();
+    updateDropdownDisplay();
+    
+    renderEmployeeCheckboxes([]); // Start with no practices selected (show all employees)
+    
+    // Add date change handlers to refresh allocation info
+    const startDateInput = document.getElementById('start_date');
+    const endDateInput = document.getElementById('end_date');
+    
+    function onDateChange() {
+      const selected = Array.from(document.querySelectorAll('input[name="emp_ids"]:checked')).map(cb => cb.value);
+      if (selected.length > 0) {
+        fetchEmployeeDetails(selected);
+      }
+    }
+    
+    startDateInput.addEventListener('change', onDateChange);
+    endDateInput.addEventListener('change', onDateChange);
+    
+    // Add form submission handler
+    const form = document.querySelector('form');
+    form.addEventListener('submit', async function(e) {
+      e.preventDefault(); // Prevent default submission
+      
+      const loading = document.getElementById('loading-status');
+      const submitBtn = document.querySelector('button[type="submit"]');
+      
+      // Show loading state
+      loading.textContent = 'Checking for allocation conflicts...';
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Checking...';
+      
+      try {
+        const conflictCheck = await checkAllocationConflicts();
+        
+        if (conflictCheck.hasConflicts) {
+          // Show conflicts in alert
+          alert(conflictCheck.message);
+          loading.textContent = '';
+          submitBtn.disabled = false;
+          submitBtn.textContent = '✅ Assign Schedule';
+          return;
+        }
+        
+        // No conflicts, proceed with submission
+        loading.textContent = 'Submitting assignment...';
+        submitBtn.textContent = 'Submitting...';
+        form.submit(); // Submit the form normally
+        
+      } catch (error) {
+        console.error('Error during submission:', error);
+        alert('An error occurred while checking conflicts. Please try again.');
+        loading.textContent = '';
+        submitBtn.disabled = false;
+        submitBtn.textContent = '✅ Assign Schedule';
+      }
+    });
+  });
+
+  // Manual conflict checking function
+  async function checkConflictsManually() {
+    const loading = document.getElementById('loading-status');
+    const checkBtn = document.querySelector('button[onclick="checkConflictsManually()"]');
+    
+    checkBtn.disabled = true;
+    checkBtn.textContent = 'Checking...';
+    loading.textContent = 'Checking for allocation conflicts...';
+    
+    try {
+      const conflictCheck = await checkAllocationConflicts();
+      
+      if (conflictCheck.hasConflicts) {
+        alert(conflictCheck.message);
+      } else {
+        const selected = Array.from(document.querySelectorAll('input[name="emp_ids"]:checked')).map(cb => cb.value);
+        if (selected.length > 0) {
+          alert('✅ No conflicts found! All selected employees are available for the specified hours and date range.');
+        } else {
+          alert('Please select employees and set dates before checking for conflicts.');
+        }
+      }
+    } catch (error) {
+      console.error('Error checking conflicts:', error);
+      alert('An error occurred while checking conflicts. Please try again.');
+    } finally {
+      loading.textContent = '';
+      checkBtn.disabled = false;
+      checkBtn.textContent = '🔍 Check Conflicts';
+    }
+  }
+
+  // Manual conflict checking function
+  async function checkConflictsManually() {
+    const loading = document.getElementById('loading-status');
+    const checkBtn = document.querySelector('button[onclick="checkConflictsManually()"]');
+    
+    checkBtn.disabled = true;
+    checkBtn.textContent = 'Checking...';
+    loading.textContent = 'Checking for allocation conflicts...';
+    
+    try {
+      const conflictCheck = await checkAllocationConflicts();
+      
+      if (conflictCheck.hasConflicts) {
+        alert(conflictCheck.message);
+      } else {
+        const selected = Array.from(document.querySelectorAll('input[name="emp_ids"]:checked')).map(cb => cb.value);
+        if (selected.length > 0) {
+          alert('✅ No conflicts found! All selected employees are available for the specified hours and date range.');
+        } else {
+          alert('Please select employees and set dates before checking for conflicts.');
+        }
+      }
+    } catch (error) {
+      console.error('Error checking conflicts:', error);
+      alert('An error occurred while checking conflicts. Please try again.');
+    } finally {
+      loading.textContent = '';
+      checkBtn.disabled = false;
+      checkBtn.textContent = '🔍 Check Conflicts';
+    }
+  }
+</script>
+
+<!-- jQuery (required for Select2) -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<!-- Select2 JavaScript -->
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+<script>
+  // Initialize Select2 when document is ready
+  $(document).ready(function() {
+    // Initialize Select2 on any existing project dropdowns
+    $('.project-select2').each(function() {
+      if (this.id) {
+        initializeSelect2('#' + this.id);
+      }
+    });
+  });
+  
+  // Fallback initialization if jQuery document ready doesn't work
+  window.addEventListener('load', function() {
+    setTimeout(() => {
+      const selects = document.querySelectorAll('.project-select2');
+      selects.forEach(select => {
+        if (select.id && typeof window.jQuery !== 'undefined' && !window.jQuery(select).hasClass('select2-hidden-accessible')) {
+          initializeSelect2('#' + select.id);
+        }
+      });
+    }, 500);
+  });
+</script>
+
+</body>
+</html>

@@ -1,0 +1,1493 @@
+<!-- views/admin-welcome.ejs -->
+
+<div class="min-h-screen bg-gray-50">
+  <!-- Top navbar -->
+  <header>
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex justify-between h-16 items-center">
+        <div class="flex items-center gap-3">
+          <img src="/logo.jpg" alt="logo" class="h-10 w-10 rounded-full object-cover" />
+
+          <h1 class="text-xl font-semibold mt-6">System for Efficient Team Utilization</h1>
+          
+        </div>
+        <div class="flex items-center gap-4 mt-3">
+          <!-- <button title="Notifications" class="p-2 rounded-md hover:bg-gray-100">
+            🔔
+          </button>
+          <button title="Settings" class="p-2 rounded-md hover:bg-gray-100">
+            ⚙️
+          </button> -->
+          <div class="flex items-center gap-2 p-2">
+            <span class="text-sm text-gray-600"><%= (session && session.user && session.user.email) ? session.user.email : (users && users[0] && users[0].email) || 'admin@cbsl.com' %></span>
+            <!-- <img src="/uploads/bcd2f65d70ff4e312a7fdd046b59bf3f" alt="profile" class="h-8 w-8 rounded-full object-cover" /> -->
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+    <!-- KPI Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div class="bg-white p-4 rounded-lg shadow-sm">
+        <div class="text-sm text-gray-500">Total Employees</div>
+        <div class="mt-2 text-2xl font-bold"><%= typeof totalEmployees !== 'undefined' ? totalEmployees : 0 %></div>
+      </div>
+      <div class="bg-white p-4 rounded-lg shadow-sm">
+        <div class="text-sm text-gray-500">Total Projects</div>
+        <div class="mt-2 text-2xl font-bold"><%= typeof totalProjects !== 'undefined' ? totalProjects : 0 %></div>
+      </div>
+      <div class="bg-white p-4 rounded-lg shadow-sm">
+        <div class="text-sm text-gray-500">Total Practices</div>
+        <div class="mt-2 text-2xl font-bold"><%= typeof totalPractices !== 'undefined' ? totalPractices : 0 %></div>
+      </div>
+      <div class="bg-white p-4 rounded-lg shadow-sm">
+        <div class="text-sm text-gray-500">Utilization % (This Month)</div>
+        <div class="mt-2 text-2xl font-bold"><%= typeof utilizationPercent !== 'undefined' ? (utilizationPercent + '%') : '0%' %></div>
+      </div>
+    </div>
+
+    <!-- Quick Actions area (full width) -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mt-6">
+      <section class="bg-white p-4 rounded-lg shadow-sm lg:col-span-3">
+        <h2 class="font-semibold mb-3">Quick Actions</h2>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
+          <% if (quickActions && quickActions.length) { %>
+            <% quickActions.forEach(action => { %>
+              <a href="<%= action.url %>" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 p-3 rounded-md flex items-center justify-center"> <%= action.title %> </a>
+            <% }) %>
+          <% } %>
+        </div>
+      </section>
+    </div>
+
+  <!-- Lower area: Charts (month picker moved into Utilization Overview) -->
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-6">
+      <!-- Left card: Employee Utilization + Division Utilization side-by-side -->
+      <section class="bg-white p-4 rounded-lg shadow-sm">
+        <div class="flex items-start justify-between">
+          <div>
+            <h2 class="font-semibold">Utilization Overview</h2>
+            
+          </div>
+          <div class="flex items-center gap-3">
+            <input id="monthPicker" type="month" class="border rounded-md px-3 py-2 text-sm" />
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+          <div class="bg-white rounded-md p-3 shadow-sm">
+            <h3 class="text-sm font-medium mb-2">Employee Utilization</h3>
+            <div class="w-full h-56">
+              <canvas id="employeeUtilChart" data-counts='<%= JSON.stringify(employeeUtilCounts || [0,0,0]) %>' style="width:100%;height:100%;cursor:pointer;"></canvas>
+            </div>
+            
+          </div>
+
+          <div class="bg-white rounded-md p-3 shadow-sm">
+            <h3 class="text-sm font-medium mb-2">Division Wise Utilization</h3>
+            <div class="w-full h-56">
+              <canvas id="divisionChart" data-labels='<%= JSON.stringify(divisionLabels || []) %>' data-values='<%= JSON.stringify(divisionData || []) %>' style="width:100%;height:100%;cursor:pointer;"></canvas>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Right card: Practice-wise distribution -->
+      <section class="bg-white p-4 rounded-lg shadow-sm">
+        <div class="flex items-start justify-between">
+          <div>
+            <h2 class="font-semibold">Practice-wise Resource Distribution</h2>
+            
+          </div>
+        </div>
+          <div class="mt-4 bg-white rounded-md p-3 shadow-sm">
+          <div class="w-full h-72 mx-auto">
+            <canvas id="practiceChart" data-labels='<%= JSON.stringify(practiceLabels || []) %>' data-values='<%= JSON.stringify(practiceData || []) %>' style="width:100%;height:100%;"></canvas>
+          </div>
+        </div>
+      </section>
+    </div>
+
+  <!-- Top Contributors / Highlights removed -->
+  </main>
+</div>
+
+<!-- Employee Utilization Modal -->
+<div id="employeeModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 hidden">
+  <div class="relative top-20 mx-auto p-5 border w-11/12 max-w-4xl shadow-lg rounded-md bg-white">
+    <div class="mt-3">
+      <!-- Modal Header -->
+      <div class="flex items-center justify-between pb-3 border-b">
+        <div class="flex items-center space-x-4">
+          <h3 class="text-lg font-semibold text-gray-900" id="modalTitle">Employee Utilization Details</h3>
+          <button id="exportCsvBtn" class="hidden bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm font-medium inline-flex items-center">
+            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+            </svg>
+            Export CSV
+          </button>
+        </div>
+        <button id="closeModal" class="text-gray-400 hover:text-gray-600">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
+        </button>
+      </div>
+      
+      <!-- Modal Content -->
+      <div class="mt-4">
+        <div id="modalLoading" class="text-center py-8 hidden">
+          <div class="inline-flex items-center">
+            <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            Loading employees...
+          </div>
+        </div>
+        
+        <div id="modalContent" class="hidden">
+          <div class="mb-4">
+            <p class="text-sm text-gray-600" id="modalDescription"></p>
+          </div>
+          
+          <!-- Employee Table -->
+          <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+              <thead class="bg-blue-600">
+                <tr>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Employee Code</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Name</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Division</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Practice</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Assigned Hours</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Utilization %</th>
+                </tr>
+              </thead>
+              <tbody id="employeeTableBody" class="bg-white divide-y divide-gray-200">
+                <!-- Employee rows will be inserted here -->
+              </tbody>
+            </table>
+          </div>
+          
+          <!-- Pagination Controls -->
+          <div id="paginationControls" class="mt-4 flex items-center justify-between">
+            <div class="text-sm text-gray-700">
+              Showing <span id="startRecord">0</span> to <span id="endRecord">0</span> of <span id="totalRecords">0</span> results
+            </div>
+            <div class="flex space-x-2">
+              <button id="prevPageBtn" class="px-3 py-1 text-sm bg-gray-200 text-gray-600 rounded hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                Previous
+              </button>
+              <span id="pageNumbers" class="flex space-x-1">
+                <!-- Page numbers will be inserted here -->
+              </span>
+              <button id="nextPageBtn" class="px-3 py-1 text-sm bg-gray-200 text-gray-600 rounded hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                Next
+              </button>
+            </div>
+          </div>
+          
+          <div id="noEmployees" class="text-center py-8 text-gray-500 hidden">
+            No employees found for the selected utilization status.
+          </div>
+        </div>
+        
+        <div id="modalError" class="text-center py-8 text-red-500 hidden">
+          <p>Error loading employee data. Please try again.</p>
+        </div>
+      </div>
+      
+      <!-- Modal Footer -->
+      <div class="flex items-center justify-end pt-3 border-t mt-4">
+        <button id="closeModalBtn" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-medium py-2 px-4 rounded">
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Division Utilization Modal -->
+<div id="divisionModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 hidden">
+  <div class="relative top-20 mx-auto p-5 border w-11/12 max-w-4xl shadow-lg rounded-md bg-white">
+    <div class="mt-3">
+      <!-- Modal Header -->
+      <div class="flex items-center justify-between pb-3 border-b">
+        <div class="flex items-center space-x-4">
+          <h3 class="text-lg font-semibold text-gray-900" id="divisionModalTitle">Division Details</h3>
+          <button id="exportDivisionCsvBtn" class="hidden bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm font-medium inline-flex items-center">
+            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+            </svg>
+            Export CSV
+          </button>
+        </div>
+        <button id="closeDivisionModal" class="text-gray-400 hover:text-gray-600">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
+        </button>
+      </div>
+      
+      <!-- Modal Content -->
+      <div class="mt-4">
+        <div id="divisionModalLoading" class="text-center py-8 hidden">
+          <div class="inline-flex items-center">
+            <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            Loading division details...
+          </div>
+        </div>
+        
+        <div id="divisionModalContent" class="hidden">
+          <div class="mb-4">
+            <p class="text-sm text-gray-600" id="divisionModalDescription"></p>
+          </div>
+          
+          <!-- Employee Table -->
+          <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+              <thead class="bg-blue-600">
+                <tr>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Employee Code</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Name</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Division</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Practice</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Assigned Hours</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Utilization %</th>
+                </tr>
+              </thead>
+              <tbody id="divisionEmployeeTableBody" class="bg-white divide-y divide-gray-200">
+                <!-- Employee rows will be inserted here -->
+              </tbody>
+            </table>
+          </div>
+          
+          <!-- Pagination Controls -->
+          <div id="divisionPaginationControls" class="mt-4 flex items-center justify-between">
+            <div class="text-sm text-gray-700">
+              Showing <span id="divisionStartRecord">0</span> to <span id="divisionEndRecord">0</span> of <span id="divisionTotalRecords">0</span> results
+            </div>
+            <div class="flex space-x-2">
+              <button id="divisionPrevPageBtn" class="px-3 py-1 text-sm bg-gray-200 text-gray-600 rounded hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                Previous
+              </button>
+              <span id="divisionPageNumbers" class="flex space-x-1">
+                <!-- Page numbers will be inserted here -->
+              </span>
+              <button id="divisionNextPageBtn" class="px-3 py-1 text-sm bg-gray-200 text-gray-600 rounded hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                Next
+              </button>
+            </div>
+          </div>
+          
+          <div id="noDivisionEmployees" class="text-center py-8 text-gray-500 hidden">
+            No employees found for the selected division.
+          </div>
+        </div>
+        
+        <div id="divisionModalError" class="text-center py-8 text-red-500 hidden">
+          <p>Error loading division data. Please try again.</p>
+        </div>
+      </div>
+      
+      <!-- Modal Footer -->
+      <div class="flex items-center justify-end pt-3 border-t mt-4">
+        <button id="closeDivisionModalBtn" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-medium py-2 px-4 rounded">
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Practice Utilization Modal -->
+<div id="practiceModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 hidden">
+  <div class="relative top-20 mx-auto p-5 border w-11/12 max-w-4xl shadow-lg rounded-md bg-white">
+    <div class="mt-3">
+      <!-- Modal Header -->
+      <div class="flex items-center justify-between pb-3 border-b">
+        <div class="flex items-center space-x-4">
+          <h3 class="text-lg font-semibold text-gray-900" id="practiceModalTitle">Practice Details</h3>
+          <button id="exportPracticeCsvBtn" class="hidden bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm font-medium inline-flex items-center">
+            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+            </svg>
+            Export CSV
+          </button>
+        </div>
+        <button id="closePracticeModal" class="text-gray-400 hover:text-gray-600">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
+        </button>
+      </div>
+      
+      <!-- Modal Content -->
+      <div class="mt-4">
+        <div id="practiceModalLoading" class="text-center py-8 hidden">
+          <div class="inline-flex items-center">
+            <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            Loading practice details...
+          </div>
+        </div>
+        
+        <div id="practiceModalContent" class="hidden">
+          <div class="mb-4">
+            <p class="text-sm text-gray-600" id="practiceModalDescription"></p>
+          </div>
+          
+          <!-- Employee Table -->
+          <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+              <thead class="bg-blue-600">
+                <tr>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Employee Code</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Name</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Division</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Designation</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Practice</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Practice Manager</th>
+                </tr>
+              </thead>
+              <tbody id="practiceEmployeeTableBody" class="bg-white divide-y divide-gray-200">
+                <!-- Employee rows will be inserted here -->
+              </tbody>
+            </table>
+          </div>
+          
+          <!-- Pagination Controls -->
+          <div id="practicePaginationControls" class="mt-4 flex items-center justify-between">
+            <div class="text-sm text-gray-700">
+              Showing <span id="practiceStartRecord">0</span> to <span id="practiceEndRecord">0</span> of <span id="practiceTotalRecords">0</span> results
+            </div>
+            <div class="flex space-x-2">
+              <button id="practicePrevPageBtn" class="px-3 py-1 text-sm bg-gray-200 text-gray-600 rounded hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                Previous
+              </button>
+              <span id="practicePageNumbers" class="flex space-x-1">
+                <!-- Page numbers will be inserted here -->
+              </span>
+              <button id="practiceNextPageBtn" class="px-3 py-1 text-sm bg-gray-200 text-gray-600 rounded hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                Next
+              </button>
+            </div>
+          </div>
+          
+          <div id="noPracticeEmployees" class="text-center py-8 text-gray-500 hidden">
+            No employees found for the selected practice.
+          </div>
+        </div>
+        
+        <div id="practiceModalError" class="text-center py-8 text-red-500 hidden">
+          <p>Error loading practice data. Please try again.</p>
+        </div>
+      </div>
+      
+      <!-- Modal Footer -->
+      <div class="flex items-center justify-end pt-3 border-t mt-4">
+        <button id="closePracticeModalBtn" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-medium py-2 px-4 rounded">
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+
+  <script>
+  (function(){
+    // Helper: read JSON dataset safely
+    function readDataset(el, key, fallback) {
+      try { return JSON.parse(el.dataset[key] || fallback); } catch(e) { return fallback; }
+    }
+
+    // Color palette
+    const PALETTE = ['#6366F1','#06B6D4','#8B5CF6','#10B981','#F59E0B','#F97316','#EF4444','#3B82F6','#E11D48','#84CC16'];
+
+    // Center text plugin: shows hovered segment percent or total (formats total as FTE when chart id === 'divisionChart')
+    const centerTextPlugin = {
+      id: 'centerText',
+      afterDraw(chart) {
+        const {ctx, chartArea: {left, right, top, bottom}, data, _active} = chart;
+        const centerX = (left + right) / 2;
+        const centerY = (top + bottom) / 2;
+        ctx.save();
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillStyle = '#374151';
+
+        // Helper: determine if a data index is currently visible (works with Chart.js v3+)
+        function isIndexVisible(ch, idx) {
+          try {
+            if (typeof ch.getDataVisibility === 'function') return ch.getDataVisibility(idx);
+          } catch(e){}
+          // Fallback: check element.hidden on meta data
+          try {
+            const meta = ch.getDatasetMeta && ch.getDatasetMeta(0);
+            const el = meta && meta.data && meta.data[idx];
+            return el ? !el.hidden : true;
+          } catch(e) { return true; }
+        }
+
+        // If a segment is active (hovered), show its label and percent (percent relative to visible segments)
+        if (_active && _active.length) {
+          const active = _active[0];
+          const ds = data.datasets[active.datasetIndex];
+          const value = Number(ds.data[active.index]) || 0;
+          const total = ds.data.reduce((s, v, i) => s + (isIndexVisible(chart, i) ? (Number(v) || 0) : 0), 0) || 1;
+          const pct = Math.round((value / total) * 100);
+          ctx.font = '600 16px "Inter", system-ui, -apple-system, "Segoe UI"';
+          ctx.fillText(pct + '%', centerX, centerY - 8);
+          ctx.font = '400 12px "Inter"';
+          ctx.fillText(data.labels[active.index] || '', centerX, centerY + 12);
+        } else {
+          // Default: show total sum of currently visible segments only
+          const ds = data.datasets && data.datasets[0];
+          const total = ds ? ds.data.reduce((s, v, i) => s + (isIndexVisible(chart, i) ? (Number(v) || 0) : 0), 0) : 0;
+          // If this is the division chart, format as FTE with 2 decimals
+          const isDivision = chart && chart.canvas && chart.canvas.id === 'divisionChart';
+          if (isDivision) {
+            ctx.font = '600 14px "Inter"';
+            ctx.fillText(Number(total).toFixed(2), centerX, centerY - 8);
+            ctx.font = '400 11px "Inter"';
+            ctx.fillText('Total FTE', centerX, centerY + 12);
+          } else {
+            ctx.font = '600 14px "Inter"';
+            ctx.fillText(total, centerX, centerY - 6);
+            ctx.font = '400 11px "Inter"';
+            ctx.fillText('Total', centerX, centerY + 12);
+          }
+        }
+        ctx.restore();
+      }
+    };
+
+    // Common chart options
+    function baseOptions() {
+      return {
+        responsive: true,
+        maintainAspectRatio: false,
+        cutout: '60%',
+        animation: { duration: 600, easing: 'easeOutCubic' },
+        plugins: {
+          legend: { position: 'bottom', labels: {boxWidth:12, padding:12, usePointStyle: true} },
+          tooltip: {
+            enabled: true,
+            padding: 8,
+            titleFont: {weight:600},
+            callbacks: {
+              // Show FTE (2 decimals) and original hours when available
+              label: function(context) {
+                const label = context.label || '';
+                const ds = context.dataset || {};
+                const value = context.raw; // this will be FTE for division chart if we pass FTEs
+                const idx = context.dataIndex;
+                let parts = [];
+                if (typeof value === 'number') parts.push(Number(value).toFixed(2) + ' FTE');
+                // show original hours if stored on dataset as _rawHours
+                if (ds._rawHours && typeof ds._rawHours[idx] !== 'undefined') {
+                  parts.push('(' + Number(ds._rawHours[idx]) + ' hrs)');
+                }
+                return label + ' — ' + parts.join(' ');
+              }
+            }
+          }
+        }
+      };
+    }
+
+    // Create a doughnut chart given canvas and data
+    function createDoughnut(el, labels, values, paletteOverride, rawHoursArray) {
+      const ctx = el.getContext('2d');
+      const palette = paletteOverride || PALETTE;
+      const bg = labels.map((_,i)=> palette[i % palette.length]);
+      const dataset = { data: values, backgroundColor: bg, hoverOffset: 8 };
+      if (Array.isArray(rawHoursArray)) dataset._rawHours = rawHoursArray;
+      return new Chart(ctx, {
+        type: 'doughnut',
+        data: { labels: labels, datasets: [dataset] },
+        options: baseOptions(),
+        plugins: [centerTextPlugin]
+      });
+    }
+
+    // Initialize Employee Utilization
+    (function(){
+      const el = document.getElementById('employeeUtilChart');
+      if (!el) return;
+      const counts = readDataset(el, 'counts', '[0,0,0]');
+      const labels = ['Fully Utilized','Partially Utilized','Unutilized'];
+      try { 
+        window.employeeChart = createDoughnut(el, labels, counts, ['#10B981','#F59E0B','#EF4444']);
+        
+        // Add click event handler for Employee Utilization chart
+        el.addEventListener('click', function(event) {
+          const activeElements = window.employeeChart.getElementsAtEventForMode(event, 'nearest', { intersect: true }, true);
+          if (activeElements.length > 0) {
+            const activeElement = activeElements[0];
+            const dataIndex = activeElement.index;
+            const label = labels[dataIndex];
+            
+            // Map labels to status values for API call
+            const statusMap = {
+              'Fully Utilized': 'fully',
+              'Partially Utilized': 'partially',
+              'Unutilized': 'unutilized'
+            };
+            
+            const status = statusMap[label];
+            if (status) {
+              showEmployeeUtilizationModal(status, label);
+            }
+          }
+        });
+      }
+      catch(e){ console.warn('employee chart error', e); }
+    })();
+
+    // Initialize Division Utilization
+    (function(){
+      const el = document.getElementById('divisionChart');
+      if (!el) return;
+      const labels = readDataset(el, 'labels', '[]');
+      const values = readDataset(el, 'values', '[]'); // original hours per division
+
+      // determine selected month (from URL param or monthPicker input default)
+      const params = new URLSearchParams(window.location.search);
+      const urlMonth = params.get('month');
+      const inp = document.getElementById('monthPicker');
+      const now = new Date();
+      const pad = n => n < 10 ? '0'+n : ''+n;
+      const defaultMonth = now.getFullYear() + '-' + pad(now.getMonth()+1);
+      const selectedMonth = urlMonth || (inp && inp.value) || defaultMonth; // format YYYY-MM
+
+      // Calculate weekdays in the selected month (Mon-Fri)
+      function weekdaysInMonth(ym) {
+        if (!ym || typeof ym !== 'string') return 0;
+        const parts = ym.split('-');
+        if (parts.length < 2) return 0;
+        const year = parseInt(parts[0],10);
+        const month = parseInt(parts[1],10) - 1; // zero-based
+        const first = new Date(year, month, 1);
+        const last = new Date(year, month + 1, 0);
+        let count = 0;
+        for (let d = new Date(first); d <= last; d.setDate(d.getDate()+1)) {
+          const day = d.getDay();
+          if (day !== 0 && day !== 6) count++; // not Sunday(0) or Saturday(6)
+        }
+        return count;
+      }
+
+      const weekdays = weekdaysInMonth(selectedMonth) || 0;
+      const monthWorkingHours = weekdays * 8 || 1; // avoid divide by zero
+
+      // compute FTE values (hours / monthWorkingHours)
+      const hoursArr = values.map(v => Number(v) || 0);
+      const fteValues = hoursArr.map(h => Number(h) / monthWorkingHours);
+
+      try { 
+        window.divisionChart = createDoughnut(el, labels, fteValues, undefined, hoursArr);
+        
+        // Add click event handler for Division chart
+        el.addEventListener('click', function(event) {
+          const activeElements = window.divisionChart.getElementsAtEventForMode(event, 'nearest', { intersect: true }, true);
+          if (activeElements.length > 0) {
+            const activeElement = activeElements[0];
+            const dataIndex = activeElement.index;
+            const divisionName = labels[dataIndex];
+            
+            if (divisionName) {
+              showDivisionModal(divisionName);
+            }
+          }
+        });
+      }
+      catch(e){ console.warn('division chart error', e); }
+    })();
+
+    // Initialize Practice Chart
+    (function(){
+      const el = document.getElementById('practiceChart');
+      if (!el) return;
+      const labels = readDataset(el, 'labels', '[]');
+      const values = readDataset(el, 'values', '[]');
+      try { 
+        window.practiceChart = createDoughnut(el, labels, values);
+        
+        // Add click event handler for Practice chart
+        el.addEventListener('click', function(event) {
+          const activeElements = window.practiceChart.getElementsAtEventForMode(event, 'nearest', { intersect: true }, true);
+          if (activeElements.length > 0) {
+            const activeElement = activeElements[0];
+            const dataIndex = activeElement.index;
+            const practiceName = labels[dataIndex];
+            
+            if (practiceName) {
+              showPracticeModal(practiceName);
+            }
+          }
+        });
+      }
+      catch(e){ console.warn('practice chart error', e); }
+    })();
+
+    // Month picker wiring: default to current month or URL param, reload with ?month=YYYY-MM
+    (function(){
+      const inp = document.getElementById('monthPicker');
+      if (!inp) return;
+      // parse ?month=YYYY-MM from URL
+      const params = new URLSearchParams(window.location.search);
+      const urlMonth = params.get('month');
+      const now = new Date();
+      const pad = n => n < 10 ? '0'+n : ''+n;
+      const defaultMonth = now.getFullYear() + '-' + pad(now.getMonth()+1);
+      inp.value = urlMonth || defaultMonth;
+
+      inp.addEventListener('change', function(){
+        const m = inp.value;
+        if (!m) return;
+        params.set('month', m);
+        // preserve other params
+        const target = window.location.pathname + '?' + params.toString();
+        window.location.href = target;
+      });
+    })();
+
+    // Register plugin globally
+    if (Chart && Chart.register) Chart.register(centerTextPlugin);
+
+    // Employee Utilization Modal Functions
+    let currentUtilizationStatus = '';
+    let currentMonth = '';
+    
+    function showEmployeeUtilizationModal(status, label) {
+      const modal = document.getElementById('employeeModal');
+      const modalTitle = document.getElementById('modalTitle');
+      const modalDescription = document.getElementById('modalDescription');
+      const modalLoading = document.getElementById('modalLoading');
+      const modalContent = document.getElementById('modalContent');
+      const modalError = document.getElementById('modalError');
+      const exportBtn = document.getElementById('exportCsvBtn');
+      
+      // Get current month from month picker or default to current month
+      const monthPicker = document.getElementById('monthPicker');
+      const selectedMonth = monthPicker ? monthPicker.value : '';
+      
+      // Store current status and month for CSV export
+      currentUtilizationStatus = status;
+      currentMonth = selectedMonth;
+      
+      // Set modal title and description
+      modalTitle.textContent = `${label} Employees`;
+      modalDescription.textContent = `Showing all ${label.toLowerCase()} employees for ${selectedMonth || 'current month'}`;
+      
+      // Show modal and loading state
+      modal.classList.remove('hidden');
+      modalLoading.classList.remove('hidden');
+      modalContent.classList.add('hidden');
+      modalError.classList.add('hidden');
+      exportBtn.classList.add('hidden');
+      
+      // Fetch employee data
+      const queryParams = new URLSearchParams({
+        status: status,
+        month: selectedMonth
+      });
+      
+      fetch(`/api/employees/by-utilization?${queryParams}`)
+        .then(response => response.json())
+        .then(data => {
+          modalLoading.classList.add('hidden');
+          
+          if (data.success && data.employees) {
+            displayEmployeeData(data.employees, data.total);
+            modalContent.classList.remove('hidden');
+            // Show export button only when data is available
+            if (data.employees.length > 0) {
+              exportBtn.classList.remove('hidden');
+            }
+          } else {
+            throw new Error(data.error || 'Failed to fetch employee data');
+          }
+        })
+        .catch(error => {
+          console.error('Error fetching employee utilization data:', error);
+          modalLoading.classList.add('hidden');
+          modalError.classList.remove('hidden');
+        });
+    }
+    
+    // Pagination variables
+    let currentPage = 1;
+    let itemsPerPage = 10;
+    let allEmployees = [];
+    let totalEmployees = 0;
+
+    function displayEmployeeData(employees, total) {
+      allEmployees = employees;
+      totalEmployees = total;
+      currentPage = 1;
+      
+      if (employees.length === 0) {
+        showNoEmployees();
+        return;
+      }
+      
+      renderCurrentPage();
+      updatePaginationControls();
+    }
+    
+    function showNoEmployees() {
+      const tableBody = document.getElementById('employeeTableBody');
+      const noEmployees = document.getElementById('noEmployees');
+      const paginationControls = document.getElementById('paginationControls');
+      
+      tableBody.innerHTML = '';
+      noEmployees.classList.remove('hidden');
+      paginationControls.style.display = 'none';
+    }
+    
+    function renderCurrentPage() {
+      const tableBody = document.getElementById('employeeTableBody');
+      const noEmployees = document.getElementById('noEmployees');
+      const paginationControls = document.getElementById('paginationControls');
+      
+      noEmployees.classList.add('hidden');
+      paginationControls.style.display = 'flex';
+      
+      const startIndex = (currentPage - 1) * itemsPerPage;
+      const endIndex = Math.min(startIndex + itemsPerPage, allEmployees.length);
+      const currentEmployees = allEmployees.slice(startIndex, endIndex);
+      
+      // Generate table rows (removed designation column)
+      tableBody.innerHTML = currentEmployees.map(emp => `
+        <tr class="hover:bg-gray-50">
+          <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+            ${emp.empCode || 'N/A'}
+          </td>
+          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+            ${emp.name || 'N/A'}
+          </td>
+          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+            ${emp.division || 'N/A'}
+          </td>
+          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+            ${emp.homePractice || 'N/A'}
+          </td>
+          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+            ${emp.assignedHours || 0} hrs
+          </td>
+          <td class="px-6 py-4 whitespace-nowrap">
+            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getUtilizationColor(emp.utilizationStatus)}">
+              ${emp.utilizationPercent}%
+            </span>
+          </td>
+        </tr>
+      `).join('');
+      
+      updateRecordInfo(startIndex + 1, endIndex, totalEmployees);
+    }
+    
+    function updateRecordInfo(start, end, total) {
+      document.getElementById('startRecord').textContent = start;
+      document.getElementById('endRecord').textContent = end;
+      document.getElementById('totalRecords').textContent = total;
+    }
+    
+    function updatePaginationControls() {
+      const totalPages = Math.ceil(totalEmployees / itemsPerPage);
+      const prevBtn = document.getElementById('prevPageBtn');
+      const nextBtn = document.getElementById('nextPageBtn');
+      const pageNumbers = document.getElementById('pageNumbers');
+      
+      // Update prev/next buttons
+      prevBtn.disabled = currentPage === 1;
+      nextBtn.disabled = currentPage === totalPages;
+      
+      // Generate page numbers
+      let pageNumbersHTML = '';
+      const maxVisiblePages = 5;
+      let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+      let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+      
+      if (endPage - startPage + 1 < maxVisiblePages) {
+        startPage = Math.max(1, endPage - maxVisiblePages + 1);
+      }
+      
+      for (let i = startPage; i <= endPage; i++) {
+        pageNumbersHTML += `
+          <button class="px-3 py-1 text-sm rounded ${i === currentPage ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-600 hover:bg-gray-300'}" 
+                  onclick="goToPage(${i})">
+            ${i}
+          </button>
+        `;
+      }
+      
+      pageNumbers.innerHTML = pageNumbersHTML;
+    }
+    
+    function goToPage(page) {
+      const totalPages = Math.ceil(totalEmployees / itemsPerPage);
+      if (page >= 1 && page <= totalPages) {
+        currentPage = page;
+        renderCurrentPage();
+        updatePaginationControls();
+      }
+    }
+    
+    function previousPage() {
+      if (currentPage > 1) {
+        goToPage(currentPage - 1);
+      }
+    }
+    
+    function nextPage() {
+      const totalPages = Math.ceil(totalEmployees / itemsPerPage);
+      if (currentPage < totalPages) {
+        goToPage(currentPage + 1);
+      }
+    }
+    
+    function getUtilizationColor(status) {
+      switch(status) {
+        case 'fully':
+          return 'bg-green-100 text-green-800';
+        case 'partially':
+          return 'bg-yellow-100 text-yellow-800';
+        case 'unutilized':
+          return 'bg-red-100 text-red-800';
+        default:
+          return 'bg-gray-100 text-gray-800';
+      }
+    }
+    
+    // CSV Export Function
+    function exportEmployeesCSV() {
+      if (!currentUtilizationStatus) {
+        alert('No utilization status selected for export');
+        return;
+      }
+      
+      // Show loading state on export button
+      const exportBtn = document.getElementById('exportCsvBtn');
+      const originalText = exportBtn.innerHTML;
+      exportBtn.innerHTML = `
+        <svg class="animate-spin w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+        Exporting...
+      `;
+      exportBtn.disabled = true;
+      
+      // Build query parameters
+      const queryParams = new URLSearchParams({
+        status: currentUtilizationStatus,
+        month: currentMonth
+      });
+      
+      // Create a temporary link and trigger download
+      const link = document.createElement('a');
+      link.href = `/api/employees/export-csv?${queryParams}`;
+      link.download = ''; // Let the server set the filename
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      // Reset button state after a short delay
+      setTimeout(() => {
+        exportBtn.innerHTML = originalText;
+        exportBtn.disabled = false;
+      }, 2000);
+    }
+    
+    // Modal close functionality
+    function closeEmployeeModal() {
+      const modal = document.getElementById('employeeModal');
+      modal.classList.add('hidden');
+      // Reset current status and month
+      currentUtilizationStatus = '';
+      currentMonth = '';
+    }
+    
+    // Event listeners for modal close
+    document.getElementById('closeModal').addEventListener('click', closeEmployeeModal);
+    document.getElementById('closeModalBtn').addEventListener('click', closeEmployeeModal);
+    
+    // Event listener for CSV export
+    document.getElementById('exportCsvBtn').addEventListener('click', exportEmployeesCSV);
+    
+    // Event listeners for pagination
+    document.getElementById('prevPageBtn').addEventListener('click', previousPage);
+    document.getElementById('nextPageBtn').addEventListener('click', nextPage);
+    
+    // Close modal when clicking outside
+    document.getElementById('employeeModal').addEventListener('click', function(event) {
+      if (event.target === this) {
+        closeEmployeeModal();
+      }
+    });
+    
+    // Close modal with Escape key
+    document.addEventListener('keydown', function(event) {
+      if (event.key === 'Escape') {
+        const modal = document.getElementById('employeeModal');
+        if (!modal.classList.contains('hidden')) {
+          closeEmployeeModal();
+        }
+      }
+    });
+    
+    // Division Modal Functions
+    let currentDivision = '';
+    let currentDivisionMonth = '';
+    let divisionCurrentPage = 1;
+    let divisionItemsPerPage = 10;
+    let allDivisionEmployees = [];
+    let totalDivisionEmployees = 0;
+
+    function showDivisionModal(division) {
+      const modal = document.getElementById('divisionModal');
+      const modalTitle = document.getElementById('divisionModalTitle');
+      const modalDescription = document.getElementById('divisionModalDescription');
+      const modalLoading = document.getElementById('divisionModalLoading');
+      const modalContent = document.getElementById('divisionModalContent');
+      const modalError = document.getElementById('divisionModalError');
+      const exportBtn = document.getElementById('exportDivisionCsvBtn');
+      
+      // Get current month from month picker or default to current month
+      const monthPicker = document.getElementById('monthPicker');
+      const selectedMonth = monthPicker ? monthPicker.value : '';
+      
+      // Store current division and month for CSV export
+      currentDivision = division;
+      currentDivisionMonth = selectedMonth;
+      
+      // Set modal title and description
+      modalTitle.textContent = `${division} Division Details`;
+      modalDescription.textContent = `Showing all employees assigned to ${division} division projects for ${selectedMonth || 'current month'}`;
+      
+      // Show modal and loading state
+      modal.classList.remove('hidden');
+      modalLoading.classList.remove('hidden');
+      modalContent.classList.add('hidden');
+      modalError.classList.add('hidden');
+      exportBtn.classList.add('hidden');
+      
+      // Fetch division employee data
+      const queryParams = new URLSearchParams({
+        division: division,
+        month: selectedMonth
+      });
+      
+      fetch(`/api/employees/by-division?${queryParams}`)
+        .then(response => response.json())
+        .then(data => {
+          modalLoading.classList.add('hidden');
+          
+          if (data.success && data.employees) {
+            displayDivisionEmployeeData(data.employees, data.total);
+            modalContent.classList.remove('hidden');
+            // Show export button only when data is available
+            if (data.employees.length > 0) {
+              exportBtn.classList.remove('hidden');
+            }
+          } else {
+            throw new Error(data.error || 'Failed to fetch division employee data');
+          }
+        })
+        .catch(error => {
+          console.error('Error fetching division employee data:', error);
+          modalLoading.classList.add('hidden');
+          modalError.classList.remove('hidden');
+        });
+    }
+
+    function displayDivisionEmployeeData(employees, total) {
+      allDivisionEmployees = employees;
+      totalDivisionEmployees = total;
+      divisionCurrentPage = 1;
+      
+      if (employees.length === 0) {
+        showNoDivisionEmployees();
+        return;
+      }
+      
+      renderDivisionCurrentPage();
+      updateDivisionPaginationControls();
+    }
+    
+    function showNoDivisionEmployees() {
+      const tableBody = document.getElementById('divisionEmployeeTableBody');
+      const noEmployees = document.getElementById('noDivisionEmployees');
+      const paginationControls = document.getElementById('divisionPaginationControls');
+      
+      tableBody.innerHTML = '';
+      noEmployees.classList.remove('hidden');
+      paginationControls.style.display = 'none';
+    }
+    
+    function renderDivisionCurrentPage() {
+      const tableBody = document.getElementById('divisionEmployeeTableBody');
+      const noEmployees = document.getElementById('noDivisionEmployees');
+      const paginationControls = document.getElementById('divisionPaginationControls');
+      
+      noEmployees.classList.add('hidden');
+      paginationControls.style.display = 'flex';
+      
+      const startIndex = (divisionCurrentPage - 1) * divisionItemsPerPage;
+      const endIndex = Math.min(startIndex + divisionItemsPerPage, allDivisionEmployees.length);
+      const currentEmployees = allDivisionEmployees.slice(startIndex, endIndex);
+      
+      // Generate table rows
+      tableBody.innerHTML = currentEmployees.map(emp => `
+        <tr class="hover:bg-gray-50">
+          <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+            ${emp.empCode || 'N/A'}
+          </td>
+          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+            ${emp.name || 'N/A'}
+          </td>
+          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+            ${emp.division || 'N/A'}
+          </td>
+          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+            ${emp.homePractice || 'N/A'}
+          </td>
+          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+            ${emp.assignedHours || 0} hrs
+          </td>
+          <td class="px-6 py-4 whitespace-nowrap">
+            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getDivisionUtilizationColor(emp.utilizationStatus)}">
+              ${emp.utilizationPercent}%
+            </span>
+          </td>
+        </tr>
+      `).join('');
+      
+      updateDivisionRecordInfo(startIndex + 1, endIndex, totalDivisionEmployees);
+    }
+    
+    function updateDivisionRecordInfo(start, end, total) {
+      document.getElementById('divisionStartRecord').textContent = start;
+      document.getElementById('divisionEndRecord').textContent = end;
+      document.getElementById('divisionTotalRecords').textContent = total;
+    }
+    
+    function updateDivisionPaginationControls() {
+      const totalPages = Math.ceil(totalDivisionEmployees / divisionItemsPerPage);
+      const prevBtn = document.getElementById('divisionPrevPageBtn');
+      const nextBtn = document.getElementById('divisionNextPageBtn');
+      const pageNumbers = document.getElementById('divisionPageNumbers');
+      
+      // Update prev/next buttons
+      prevBtn.disabled = divisionCurrentPage === 1;
+      nextBtn.disabled = divisionCurrentPage === totalPages;
+      
+      // Generate page numbers
+      let pageNumbersHTML = '';
+      const maxVisiblePages = 5;
+      let startPage = Math.max(1, divisionCurrentPage - Math.floor(maxVisiblePages / 2));
+      let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+      
+      if (endPage - startPage + 1 < maxVisiblePages) {
+        startPage = Math.max(1, endPage - maxVisiblePages + 1);
+      }
+      
+      for (let i = startPage; i <= endPage; i++) {
+        pageNumbersHTML += `
+          <button class="px-3 py-1 text-sm rounded ${i === divisionCurrentPage ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-600 hover:bg-gray-300'}" 
+                  onclick="goToDivisionPage(${i})">
+            ${i}
+          </button>
+        `;
+      }
+      
+      pageNumbers.innerHTML = pageNumbersHTML;
+    }
+    
+    function goToDivisionPage(page) {
+      const totalPages = Math.ceil(totalDivisionEmployees / divisionItemsPerPage);
+      if (page >= 1 && page <= totalPages) {
+        divisionCurrentPage = page;
+        renderDivisionCurrentPage();
+        updateDivisionPaginationControls();
+      }
+    }
+    
+    function divisionPreviousPage() {
+      if (divisionCurrentPage > 1) {
+        goToDivisionPage(divisionCurrentPage - 1);
+      }
+    }
+    
+    function divisionNextPage() {
+      const totalPages = Math.ceil(totalDivisionEmployees / divisionItemsPerPage);
+      if (divisionCurrentPage < totalPages) {
+        goToDivisionPage(divisionCurrentPage + 1);
+      }
+    }
+    
+    function getDivisionUtilizationColor(status) {
+      switch(status) {
+        case 'fully':
+          return 'bg-green-100 text-green-800';
+        case 'partially':
+          return 'bg-yellow-100 text-yellow-800';
+        case 'unutilized':
+          return 'bg-red-100 text-red-800';
+        default:
+          return 'bg-gray-100 text-gray-800';
+      }
+    }
+    
+    // CSV Export Function for Division
+    function exportDivisionEmployeesCSV() {
+      if (!currentDivision) {
+        alert('No division selected for export');
+        return;
+      }
+      
+      // Show loading state on export button
+      const exportBtn = document.getElementById('exportDivisionCsvBtn');
+      const originalText = exportBtn.innerHTML;
+      exportBtn.innerHTML = `
+        <svg class="animate-spin w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+        Exporting...
+      `;
+      exportBtn.disabled = true;
+      
+      // Build query parameters
+      const queryParams = new URLSearchParams({
+        division: currentDivision,
+        month: currentDivisionMonth
+      });
+      
+      // Create a temporary link and trigger download
+      const link = document.createElement('a');
+      link.href = `/api/employees/export-division-csv?${queryParams}`;
+      link.download = ''; // Let the server set the filename
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      // Reset button state after a short delay
+      setTimeout(() => {
+        exportBtn.innerHTML = originalText;
+        exportBtn.disabled = false;
+      }, 2000);
+    }
+    
+    // Division Modal close functionality
+    function closeDivisionModal() {
+      const modal = document.getElementById('divisionModal');
+      modal.classList.add('hidden');
+      // Reset current division and month
+      currentDivision = '';
+      currentDivisionMonth = '';
+    }
+    
+    // Event listeners for division modal close
+    document.getElementById('closeDivisionModal').addEventListener('click', closeDivisionModal);
+    document.getElementById('closeDivisionModalBtn').addEventListener('click', closeDivisionModal);
+    
+    // Event listener for division CSV export
+    document.getElementById('exportDivisionCsvBtn').addEventListener('click', exportDivisionEmployeesCSV);
+    
+    // Event listeners for division pagination
+    document.getElementById('divisionPrevPageBtn').addEventListener('click', divisionPreviousPage);
+    document.getElementById('divisionNextPageBtn').addEventListener('click', divisionNextPage);
+    
+    // Close division modal when clicking outside
+    document.getElementById('divisionModal').addEventListener('click', function(event) {
+      if (event.target === this) {
+        closeDivisionModal();
+      }
+    });
+    
+    // Practice Modal Functions
+    let currentPractice = '';
+    let currentPracticeMonth = '';
+    let practiceCurrentPage = 1;
+    let practiceItemsPerPage = 10;
+    let allPracticeEmployees = [];
+    let totalPracticeEmployees = 0;
+
+    function showPracticeModal(practice) {
+      const modal = document.getElementById('practiceModal');
+      const modalTitle = document.getElementById('practiceModalTitle');
+      const modalDescription = document.getElementById('practiceModalDescription');
+      const modalLoading = document.getElementById('practiceModalLoading');
+      const modalContent = document.getElementById('practiceModalContent');
+      const modalError = document.getElementById('practiceModalError');
+      const exportBtn = document.getElementById('exportPracticeCsvBtn');
+      
+      // Store current practice for CSV export
+      currentPractice = practice;
+      currentPracticeMonth = ''; // Not needed anymore
+      
+      // Set modal title and description
+      modalTitle.textContent = `${practice} Practice Details`;
+      modalDescription.textContent = `Showing all employees in ${practice} practice`;
+      
+      // Show modal and loading state
+      modal.classList.remove('hidden');
+      modalLoading.classList.remove('hidden');
+      modalContent.classList.add('hidden');
+      modalError.classList.add('hidden');
+      exportBtn.classList.add('hidden');
+      
+      // Fetch practice employee data
+      const queryParams = new URLSearchParams({
+        practice: practice
+      });
+      
+      fetch(`/api/employees/by-practice?${queryParams}`)
+        .then(response => response.json())
+        .then(data => {
+          modalLoading.classList.add('hidden');
+          
+          if (data.success && data.employees) {
+            displayPracticeEmployeeData(data.employees, data.total);
+            modalContent.classList.remove('hidden');
+            // Show export button only when data is available
+            if (data.employees.length > 0) {
+              exportBtn.classList.remove('hidden');
+            }
+          } else {
+            throw new Error(data.error || 'Failed to fetch practice employee data');
+          }
+        })
+        .catch(error => {
+          console.error('Error fetching practice employee data:', error);
+          modalLoading.classList.add('hidden');
+          modalError.classList.remove('hidden');
+        });
+    }
+
+    function displayPracticeEmployeeData(employees, total) {
+      allPracticeEmployees = employees;
+      totalPracticeEmployees = total;
+      practiceCurrentPage = 1;
+      
+      if (employees.length === 0) {
+        showNoPracticeEmployees();
+        return;
+      }
+      
+      renderPracticeCurrentPage();
+      updatePracticePaginationControls();
+    }
+    
+    function showNoPracticeEmployees() {
+      const tableBody = document.getElementById('practiceEmployeeTableBody');
+      const noEmployees = document.getElementById('noPracticeEmployees');
+      const paginationControls = document.getElementById('practicePaginationControls');
+      
+      tableBody.innerHTML = '';
+      noEmployees.classList.remove('hidden');
+      paginationControls.style.display = 'none';
+    }
+    
+    function renderPracticeCurrentPage() {
+      const tableBody = document.getElementById('practiceEmployeeTableBody');
+      const noEmployees = document.getElementById('noPracticeEmployees');
+      const paginationControls = document.getElementById('practicePaginationControls');
+      
+      noEmployees.classList.add('hidden');
+      paginationControls.style.display = 'flex';
+      
+      const startIndex = (practiceCurrentPage - 1) * practiceItemsPerPage;
+      const endIndex = Math.min(startIndex + practiceItemsPerPage, allPracticeEmployees.length);
+      const currentEmployees = allPracticeEmployees.slice(startIndex, endIndex);
+      
+      // Generate table rows
+      tableBody.innerHTML = currentEmployees.map(emp => `
+        <tr class="hover:bg-gray-50">
+          <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+            ${emp.empCode || 'N/A'}
+          </td>
+          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+            ${emp.name || 'N/A'}
+          </td>
+          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+            ${emp.division || 'N/A'}
+          </td>
+          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+            ${emp.designation || 'N/A'}
+          </td>
+          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+            ${emp.homePractice || 'N/A'}
+          </td>
+          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+            ${emp.practiceManager || 'N/A'}
+          </td>
+        </tr>
+      `).join('');
+      
+      updatePracticeRecordInfo(startIndex + 1, endIndex, totalPracticeEmployees);
+    }
+    
+    function updatePracticeRecordInfo(start, end, total) {
+      document.getElementById('practiceStartRecord').textContent = start;
+      document.getElementById('practiceEndRecord').textContent = end;
+      document.getElementById('practiceTotalRecords').textContent = total;
+    }
+    
+    function updatePracticePaginationControls() {
+      const totalPages = Math.ceil(totalPracticeEmployees / practiceItemsPerPage);
+      const prevBtn = document.getElementById('practicePrevPageBtn');
+      const nextBtn = document.getElementById('practiceNextPageBtn');
+      const pageNumbers = document.getElementById('practicePageNumbers');
+      
+      // Update prev/next buttons
+      prevBtn.disabled = practiceCurrentPage === 1;
+      nextBtn.disabled = practiceCurrentPage === totalPages;
+      
+      // Generate page numbers
+      let pageNumbersHTML = '';
+      const maxVisiblePages = 5;
+      let startPage = Math.max(1, practiceCurrentPage - Math.floor(maxVisiblePages / 2));
+      let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+      
+      if (endPage - startPage + 1 < maxVisiblePages) {
+        startPage = Math.max(1, endPage - maxVisiblePages + 1);
+      }
+      
+      for (let i = startPage; i <= endPage; i++) {
+        pageNumbersHTML += `
+          <button class="px-3 py-1 text-sm rounded ${i === practiceCurrentPage ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-600 hover:bg-gray-300'}" 
+                  onclick="goToPracticePage(${i})">
+            ${i}
+          </button>
+        `;
+      }
+      
+      pageNumbers.innerHTML = pageNumbersHTML;
+    }
+    
+    function goToPracticePage(page) {
+      const totalPages = Math.ceil(totalPracticeEmployees / practiceItemsPerPage);
+      if (page >= 1 && page <= totalPages) {
+        practiceCurrentPage = page;
+        renderPracticeCurrentPage();
+        updatePracticePaginationControls();
+      }
+    }
+    
+    function practicePreviousPage() {
+      if (practiceCurrentPage > 1) {
+        goToPracticePage(practiceCurrentPage - 1);
+      }
+    }
+    
+    function practiceNextPage() {
+      const totalPages = Math.ceil(totalPracticeEmployees / practiceItemsPerPage);
+      if (practiceCurrentPage < totalPages) {
+        goToPracticePage(practiceCurrentPage + 1);
+      }
+    }
+    
+    // CSV Export Function for Practice
+    function exportPracticeEmployeesCSV() {
+      if (!currentPractice) {
+        alert('No practice selected for export');
+        return;
+      }
+      
+      // Show loading state on export button
+      const exportBtn = document.getElementById('exportPracticeCsvBtn');
+      const originalText = exportBtn.innerHTML;
+      exportBtn.innerHTML = `
+        <svg class="animate-spin w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+        Exporting...
+      `;
+      exportBtn.disabled = true;
+      
+      // Build query parameters
+      const queryParams = new URLSearchParams({
+        practice: currentPractice
+      });
+      
+      // Create a temporary link and trigger download
+      const link = document.createElement('a');
+      link.href = `/api/employees/export-practice-csv?${queryParams}`;
+      link.download = ''; // Let the server set the filename
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      // Reset button state after a short delay
+      setTimeout(() => {
+        exportBtn.innerHTML = originalText;
+        exportBtn.disabled = false;
+      }, 2000);
+    }
+    
+    // Practice Modal close functionality
+    function closePracticeModal() {
+      const modal = document.getElementById('practiceModal');
+      modal.classList.add('hidden');
+      // Reset current practice and month
+      currentPractice = '';
+      currentPracticeMonth = '';
+    }
+    
+    // Event listeners for practice modal close
+    document.getElementById('closePracticeModal').addEventListener('click', closePracticeModal);
+    document.getElementById('closePracticeModalBtn').addEventListener('click', closePracticeModal);
+    
+    // Event listener for practice CSV export
+    document.getElementById('exportPracticeCsvBtn').addEventListener('click', exportPracticeEmployeesCSV);
+    
+    // Event listeners for practice pagination
+    document.getElementById('practicePrevPageBtn').addEventListener('click', practicePreviousPage);
+    document.getElementById('practiceNextPageBtn').addEventListener('click', practiceNextPage);
+    
+    // Close practice modal when clicking outside
+    document.getElementById('practiceModal').addEventListener('click', function(event) {
+      if (event.target === this) {
+        closePracticeModal();
+      }
+    });
+    
+    // Close modal with Escape key (updated to handle both division and practice modals)
+    document.addEventListener('keydown', function(event) {
+      if (event.key === 'Escape') {
+        const employeeModal = document.getElementById('employeeModal');
+        const divisionModal = document.getElementById('divisionModal');
+        const practiceModal = document.getElementById('practiceModal');
+        
+        if (!employeeModal.classList.contains('hidden')) {
+          closeEmployeeModal();
+        } else if (!divisionModal.classList.contains('hidden')) {
+          closeDivisionModal();
+        } else if (!practiceModal.classList.contains('hidden')) {
+          closePracticeModal();
+        }
+      }
+    });
+    
+    // Global functions for page navigation (needed for onclick handlers)
+    window.goToPage = goToPage;
+    window.goToDivisionPage = goToDivisionPage;
+    window.goToPracticePage = goToPracticePage;
+  })();
+  </script>

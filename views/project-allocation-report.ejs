@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    <link rel="stylesheet" href="/stylesheets/styles.css">
+    <!-- Select2 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
+    <style>
+        /* Theme variables */
+        :root{
+            --bg: #f4f7fb;
+            --card: #ffffff;
+            --muted: #6b7280;
+            --primary: #2563eb; /* blue-600 */
+            --accent: #0ea5a4; /* teal */
+            --surface-border: #e6e9ef;
+            --glass: rgba(255,255,255,0.6);
+            --shadow: 0 6px 18px rgba(15,23,42,0.08);
+            --radius: 10px;
+            --max-width: 1160px;
+        }
+
+        /* Base layout */
+        html,body{height:100%;}
+        body { font-family: Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial; color: #0f172a; margin: 0; padding: 36px 20px; background: linear-gradient(180deg,var(--bg),#eef2f6); }
+        .container { max-width: var(--max-width); margin: 0 auto; }
+
+        /* Header */
+        header{ display:flex; align-items:flex-start; gap:18px; margin-bottom:18px; }
+        h1 { margin: 0; font-size:22px; letter-spacing: -0.2px; }
+        p.lead { margin: 6px 0 0 0; color:var(--muted); font-size:14px; }
+
+        /* Controls */
+        form { background: linear-gradient(180deg, rgba(255,255,255,0.9), var(--card)); padding:14px; border-radius:var(--radius); box-shadow: var(--shadow); border: 1px solid var(--surface-border); margin-bottom: 16px; }
+        .form-grid { 
+            display: grid; 
+            grid-template-columns: 1fr 1fr; 
+            gap: 16px 20px; 
+            align-items: end;
+        }
+        .field { display:flex; flex-direction:column; min-width:180px; }
+        .generate-field { 
+            display: flex; 
+            flex-direction: column; 
+            justify-content: flex-end;
+        }
+        label { font-size:13px; margin-bottom:8px; color:var(--muted); }
+        select,input[type="date"] { padding:8px 10px; border:1px solid #d6ddea; border-radius:8px; background:#fbfdff; font-size:14px; }
+        .btn { padding:8px 12px; border-radius:8px; border:1px solid transparent; background:#f3f4f6; cursor:pointer; font-weight:600; color:#0f172a; box-shadow: none; transition: all 0.3s ease; }
+        .btn:hover{ transform:translateY(-1px); }
+        .btn.primary { 
+            background: #3498db;
+            color:#fff; 
+            border-color:var(--primary); 
+            box-shadow: 0 8px 20px rgba(37,99,235,0.25), 0 4px 12px rgba(37,99,235,0.15); 
+            position: relative;
+            overflow: hidden;
+            padding: 12px 24px;
+            font-size: 14px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-radius: 12px;
+        }
+        .btn.primary::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s;
+        }
+        .btn.primary:hover {
+            transform: translateY(-2px);
+            background: #3498db;
+        }
+        .btn.primary:hover::before {
+            left: 100%;
+        }
+        .btn.primary:active {
+            transform: translateY(0px);
+            box-shadow: 0 4px 12px rgba(37,99,235,0.25);
+        }
+        .generate-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .generate-btn::after {
+            
+            font-size: 16px;
+            transition: transform 0.3s ease;
+        }
+        .generate-btn:hover::after {
+            transform: scale(1.2) rotate(10deg);
+        }
+        .exports { display:flex; gap:10px; justify-content:flex-end; margin:10px 0; }
+
+        /* Table */
+        .table-wrap{ 
+            overflow-x: auto; 
+            overflow-y: visible;
+            border-radius:10px; 
+            max-width: 100%;
+            /* Custom scrollbar styling */
+            scrollbar-width: thin;
+            scrollbar-color: #cbd5e1 #f1f5f9;
+        }
+        
+        /* Webkit scrollbar styling */
+        .table-wrap::-webkit-scrollbar {
+            height: 8px;
+        }
+        
+        .table-wrap::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 4px;
+        }
+        
+        .table-wrap::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        
+        .table-wrap::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+        
+        table { 
+            min-width: 100%; 
+            width: max-content;
+            border-collapse:separate; 
+            border-spacing:0; 
+            background:var(--card); 
+            border:1px solid var(--surface-border); 
+            box-shadow:var(--shadow); 
+        }
+        thead th{ 
+            position:sticky; 
+            top:0; 
+            z-index:3; 
+            background:linear-gradient(180deg,#fbfdff,#f7fafc); 
+            border-bottom:1px solid #e6eef8; 
+        }
+        
+        /* Make the first column (Practice) sticky */
+        th:first-child,
+        td:first-child {
+            position: sticky;
+            left: 0;
+            z-index: 2;
+            background: var(--card);
+            border-right: 2px solid #e6eef8;
+        }
+        
+        /* Ensure header first column has higher z-index */
+        thead th:first-child {
+            z-index: 4;
+            background: linear-gradient(180deg,#fbfdff,#f7fafc);
+        }
+        
+        th,td { 
+            padding:12px 10px; 
+            text-align:center; 
+            font-size:13px; 
+            color:#0f172a; 
+            white-space: nowrap;
+            min-width: 80px;
+        }
+        th { font-weight:700; color:#0b1220; text-transform:uppercase; letter-spacing:0.6px; font-size:12px; }
+        tbody tr:nth-child(even){ background: #fbfcff; }
+        tbody tr:nth-child(even) td:first-child { background: #fbfcff; }
+        tbody tr:hover{ background: linear-gradient(90deg, rgba(2,6,23,0.02), rgba(255,255,255,0.02)); }
+        tbody tr:hover td:first-child { background: linear-gradient(90deg, rgba(2,6,23,0.02), rgba(255,255,255,0.02)); }
+        td.practice { text-align:left; font-weight:700; color:#0b1220; min-width: 150px; }
+        td.clickable { cursor:pointer; transition:background .12s, transform .08s; }
+        td.clickable:hover{ background: rgba(37,99,235,0.06); transform: translateY(-1px); }
+
+        /* Totals row highlight */
+        tbody tr:last-child td{ background: linear-gradient(90deg,#fbfdff,#f8fafc); font-weight:700; }
+
+        .notice { background: linear-gradient(180deg,#ffffff,#fbfdff); padding:14px; border-radius:10px; border:1px solid var(--surface-border); box-shadow:var(--shadow); color:var(--muted); }
+
+        /* Modal */
+        #detailsModal { display:none; position:fixed; inset:0; background:rgba(2,6,23,0.45); align-items:center; justify-content:center; padding:28px; }
+        .modal-content { background:linear-gradient(180deg,#ffffff,#fbfdff); padding:18px; border-radius:12px; max-width:880px; width:100%; max-height:84vh; overflow:auto; box-shadow: 0 18px 46px rgba(2,6,23,0.24); border:1px solid rgba(255,255,255,0.6); }
+        .modal-close { margin-top:12px; padding:8px 12px; border-radius:8px; border:1px solid #cbd5e1; background:#fff; cursor:pointer; }
+
+        /* Small helpers */
+        .muted{ color:var(--muted); font-size:13px; }
+        .badge{ display:inline-block; padding:4px 8px; border-radius:999px; background:rgba(14,165,164,0.12); color:var(--accent); font-weight:600; font-size:12px; }
+
+        @media (max-width:900px){ 
+            .form-grid { 
+                grid-template-columns: 1fr; 
+                gap: 12px; 
+            }
+            .field { width:100%; }
+        }
+        @media (max-width:1200px){ 
+            .form-grid { 
+                gap: 14px 16px; 
+            }
+            .field { min-width:160px; }
+        }
+
+        /* Select2 Custom Styling for seamless integration */
+        .select2-container {
+            width: 100% !important;
+        }
+        
+        .select2-container--default .select2-selection--single {
+            padding: 8px 10px !important;
+            border: 1px solid #d6ddea !important;
+            border-radius: 8px !important;
+            background: #fbfdff !important;
+            font-size: 14px !important;
+            height: auto !important;
+            min-height: 38px !important;
+            display: flex !important;
+            align-items: center !important;
+        }
+        
+        .select2-container--default .select2-selection--single .select2-selection__rendered {
+            padding: 0 !important;
+            line-height: 1.4 !important;
+            color: #0f172a !important;
+        }
+        
+        .select2-container--default .select2-selection--single .select2-selection__arrow {
+            height: 36px !important;
+            right: 8px !important;
+        }
+        
+        .select2-container--default.select2-container--focus .select2-selection--single {
+            border-color: #3498db !important;
+            box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2) !important;
+        }
+        
+        .select2-dropdown {
+            border: 1px solid #d6ddea !important;
+            border-radius: 8px !important;
+            background: #fbfdff !important;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+        }
+        
+        .select2-results__option {
+            padding: 8px 12px !important;
+            font-size: 14px !important;
+            color: #0f172a !important;
+            background: transparent !important;
+        }
+        
+        .select2-results__option--highlighted {
+            background: #3498db !important;
+            color: white !important;
+        }
+        
+        .select2-results__option--selected {
+            background: #e8f4f8 !important;
+            color: #0f172a !important;
+        }
+        
+        .select2-search--dropdown {
+            padding: 8px !important;
+        }
+        
+        .select2-search--dropdown .select2-search__field {
+            padding: 6px 10px !important;
+            border: 1px solid #d6ddea !important;
+            border-radius: 6px !important;
+            background: #ffffff !important;
+            font-size: 14px !important;
+            width: 100% !important;
+            box-sizing: border-box !important;
+        }
+        
+        .select2-search--dropdown .select2-search__field:focus {
+            border-color: #3498db !important;
+            outline: none !important;
+            box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2) !important;
+        }
+        
+        .select2-container--default .select2-selection--single .select2-selection__placeholder {
+            color: #6b7280 !important;
+        }
+        
+        /* Ensure dropdowns match the existing form styling */
+        .field select.select2-hidden-accessible + .select2-container {
+            margin: 0 !important;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Project Allocation Report</h1>
+            <!-- <p class="lead">View allocations by practice and month. Filter by specific project, division, or CBSL client.</p> -->
+        </header>
+
+        <form method="GET" action="/project-allocation-report">
+            <div class="form-grid">
+                <!-- Row 1: Project, Start Date -->
+                <div class="field">
+                    <label for="projectId">Project</label>
+                    <select name="projectId" id="projectId" class="searchable-select">
+                        <option value="">-- Choose a Project --</option>
+                        <% projects.forEach(project => { %>
+                            <option value="<%= project._id %>" <%= selectedProjectId === project._id.toString() ? 'selected' : '' %>><%= project.projectName %></option>
+                        <% }); %>
+                    </select>
+                </div>
+
+                <div class="field">
+                    <label for="startDate">Start Date</label>
+                    <input type="date" name="startDate" id="startDate" value="<%= startDate %>">
+                </div>
+
+                <!-- Row 2: Division, End Date -->
+                <div class="field">
+                    <label for="division">Division</label>
+                    <select name="division" id="division" class="searchable-select">
+                        <option value="">-- All Divisions --</option>
+                        <% divisions.forEach(div => { %>
+                            <option value="<%= div %>" <%= selectedDivision === div ? 'selected' : '' %>><%= div %></option>
+                        <% }); %>
+                    </select>
+                </div>
+
+                <div class="field">
+                    <label for="endDate">End Date</label>
+                    <input type="date" name="endDate" id="endDate" value="<%= endDate %>">
+                </div>
+
+                <!-- Row 3: CBSL Client, Generate Button -->
+                <div class="field">
+                    <label for="cbslClient">CBSL Client</label>
+                    <select name="cbslClient" id="cbslClient" class="searchable-select">
+                        <option value="">-- All Clients --</option>
+                        <% cbslClients.forEach(client => { %>
+                            <option value="<%= client %>" <%= selectedCbslClient === client ? 'selected' : '' %>><%= client %></option>
+                        <% }); %>
+                    </select>
+                </div>
+
+                <div class="field generate-field">
+                    <label>&nbsp;</label>
+                    <button type="submit" class="btn primary generate-btn">
+                        Generate Report
+                    </button>
+                </div>
+            </div>
+        </form>
+
+        <% if (reportData && (selectedProject || selectedDivision || selectedCbslClient)) { %>
+
+            <div class="exports">
+                <a class="btn" href="/project-allocation-report/export/excel?projectId=<%= selectedProjectId %>&division=<%= selectedDivision %>&cbslClient=<%= selectedCbslClient %>&startDate=<%= startDate %>&endDate=<%= endDate %>">Export Excel</a>
+                <a class="btn" target="_blank" href="/project-allocation-report/export/pdf?projectId=<%= selectedProjectId %>&division=<%= selectedDivision %>&cbslClient=<%= selectedCbslClient %>&startDate=<%= startDate %>&endDate=<%= endDate %>">Export PDF</a>
+            </div>
+
+            <% if (reportData.practices.length > 0) { %>
+                
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Practice</th>
+                                <% reportData.months.forEach(month => { %>
+                                    <th><%= month %></th>
+                                <% }); %>
+                                <th>Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <% reportData.practices.forEach(practice => { %>
+                                <tr>
+                                    <td class="practice"><%= practice.name %></td>
+                                    <% reportData.months.forEach(month => { %>
+                                        <% const allocation = reportData.matrix[practice.name] && reportData.matrix[practice.name][month]; %>
+                                        <% const hours = allocation ? allocation.totalHours : 0; %>
+                                        <% const fte = allocation && (typeof allocation.fte !== 'undefined') ? allocation.fte : (reportData.monthWorkingHours && reportData.monthWorkingHours[month] ? Number((hours / reportData.monthWorkingHours[month]).toFixed(2)) : 0); %>
+                                        <td class="clickable" onclick="showDetails('<%= practice.name %>','<%= month %>')"><%= fte %></td>
+                                    <% }); %>
+                                    <td><%= practice.totalFTE || 0 %></td>
+                                </tr>
+                            <% }); %>
+                            <tr>
+                                <td><strong>Total</strong></td>
+                                <% reportData.months.forEach(month => { %>
+                                    <% const mt = reportData.monthFTEs && typeof reportData.monthFTEs[month] !== 'undefined' ? reportData.monthFTEs[month] : (reportData.monthWorkingHours && reportData.monthWorkingHours[month] ? Number(((reportData.monthTotals[month]||0)/reportData.monthWorkingHours[month]).toFixed(2)) : 0); %>
+                                    <td><%= mt %></td>
+                                <% }); %>
+                                <td><%= reportData.grandTotalFTE || 0 %></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            <% } else { %>
+                <div class="notice">
+                    <strong>No allocation data found.</strong>
+                    <div>Please check the project or date range.</div>
+                </div>
+            <% } %>
+
+        <% } else if (selectedProjectId || selectedDivision || selectedCbslClient) { %>
+            <div class="notice"><strong>No data available:</strong> No resource allocations found for the selected criteria.</div>
+        <% } else { %>
+            <!-- <div class="notice"><strong>Tip:</strong> Choose a project, division, or client and click Generate.</div> -->
+        <% } %>
+
+        <!-- Modal -->
+        <div id="detailsModal">
+            <div class="modal-content">
+                <h3 id="modalTitle">Allocation Details</h3>
+                <div id="modalBody"></div>
+                <div style="text-align:right;"><button class="modal-close" onclick="closeDetails()">Close</button></div>
+            </div>
+        </div>
+
+        <% if (reportData) { %>
+            <script type="application/json" id="reportData"><%- JSON.stringify(reportData) %></script>
+        <% } %>
+
+    </div>
+
+    <script>
+        // Minimal client logic kept intact
+        document.addEventListener('DOMContentLoaded', function(){
+            var s = document.getElementById('startDate');
+            var e = document.getElementById('endDate');
+            if(s && !s.value){ s.value = new Date().getFullYear() + '-01-01'; }
+            if(e && !e.value){ e.value = new Date().getFullYear() + '-12-31'; }
+
+            var dataTag = document.getElementById('reportData');
+            if(dataTag){ try{ window.reportData = JSON.parse(dataTag.textContent); }catch(err){ console.error(err); } }
+
+            // Note: Dropdown interactions now handled by Select2 initialization below
+        });
+
+        function showDetails(practice, month){
+            if(!window.reportData){ return alert('No report data available.'); }
+            var alloc = window.reportData.matrix && window.reportData.matrix[practice] && window.reportData.matrix[practice][month];
+            if(!alloc || !alloc.details || alloc.details.length === 0){ return alert('No detailed allocation data available for this cell.'); }
+
+            var fteDisplay = typeof alloc.fte !== 'undefined' ? alloc.fte : (window.reportData.monthWorkingHours && window.reportData.monthWorkingHours[month] ? Number((alloc.totalHours / window.reportData.monthWorkingHours[month]).toFixed(2)) : 0);
+            document.getElementById('modalTitle').textContent = practice + ' - ' + month + ' (' + alloc.totalHours + ' hrs, ' + fteDisplay + ' FTE)';
+            var html = '<table style="width:100%;border-collapse:collapse;">' +
+                '<thead><tr><th style="text-align:left">Employee</th><th>Code</th><th>Date</th><th>Hours</th></tr></thead><tbody>';
+            alloc.details.forEach(function(d){ html += '<tr><td style="text-align:left">'+d.employee+'</td><td>'+d.empCode+'</td><td>'+d.date+'</td><td>'+d.hours+'</td></tr>'; });
+            html += '</tbody></table>';
+
+            document.getElementById('modalBody').innerHTML = html;
+            var modal = document.getElementById('detailsModal');
+            modal.style.display = 'flex';
+        }
+
+        function closeDetails(){ var m = document.getElementById('detailsModal'); if(m) m.style.display = 'none'; }
+
+        // close modal on backdrop or ESC
+        document.addEventListener('click', function(e){ var m = document.getElementById('detailsModal'); if(m && e.target === m) closeDetails(); });
+        document.addEventListener('keydown', function(e){ if(e.key === 'Escape') closeDetails(); });
+    </script>
+
+    <!-- jQuery (required for Select2) -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <!-- Select2 JavaScript -->
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+    <script>
+        // Initialize Select2 on all searchable dropdowns
+        $(document).ready(function() {
+            // Initialize Select2 with custom configuration
+            $('.searchable-select').each(function() {
+                const $select = $(this);
+                const placeholder = $select.find('option:first').text();
+                
+                $select.select2({
+                    placeholder: placeholder,
+                    allowClear: false,
+                    width: '100%',
+                    minimumResultsForSearch: 0, // Always show search box
+                    language: {
+                        noResults: function() {
+                            return "No results found";
+                        },
+                        searching: function() {
+                            return "Searching...";
+                        }
+                    },
+                    // Custom matcher for better search
+                    matcher: function(params, data) {
+                        // If there are no search terms, return all data
+                        if ($.trim(params.term) === '') {
+                            return data;
+                        }
+                        
+                        // Skip the placeholder option
+                        if (data.id === '') {
+                            return null;
+                        }
+                        
+                        // Check if the text contains the search term (case insensitive)
+                        if (data.text.toLowerCase().indexOf(params.term.toLowerCase()) > -1) {
+                            return data;
+                        }
+                        
+                        // Return null if the term doesn't match
+                        return null;
+                    }
+                });
+
+                // Auto-focus search when dropdown opens
+                $select.on('select2:open', function () {
+                    setTimeout(function() {
+                        const searchField = document.querySelector('.select2-search__field');
+                        if (searchField) {
+                            searchField.focus();
+                            searchField.setAttribute('placeholder', 'Type to search...');
+                        }
+                    }, 100);
+                });
+
+                // Clear search when dropdown closes
+                $select.on('select2:close', function () {
+                    setTimeout(function() {
+                        const searchField = document.querySelector('.select2-search__field');
+                        if (searchField) {
+                            searchField.value = '';
+                        }
+                    }, 100);
+                });
+            });
+
+            // Preserve the existing dropdown interaction logic
+            const projectSelect = $('#projectId');
+            const divisionSelect = $('#division');
+            const cbslClientSelect = $('#cbslClient');
+
+            // When project is selected, clear division and client filters
+            projectSelect.on('change', function() {
+                if (this.value) {
+                    divisionSelect.val('').trigger('change');
+                    cbslClientSelect.val('').trigger('change');
+                }
+            });
+
+            // When division is selected: clear project filter and clear client filter
+            divisionSelect.on('change', function() {
+                if (this.value) {
+                    projectSelect.val('').trigger('change');
+                    cbslClientSelect.val('').trigger('change');
+                }
+            });
+
+            // When CBSL client is selected: clear project filter and clear division filter
+            cbslClientSelect.on('change', function() {
+                if (this.value) {
+                    projectSelect.val('').trigger('change');
+                    divisionSelect.val('').trigger('change');
+                }
+            });
+
+            // Enhanced form validation
+            const form = $('form');
+            const startDateInput = $('#startDate');
+            const endDateInput = $('#endDate');
+
+            // Function to validate date range
+            function validateDateRange() {
+                const startDate = startDateInput.val();
+                const endDate = endDateInput.val();
+
+                if (startDate && endDate) {
+                    const start = new Date(startDate);
+                    const end = new Date(endDate);
+
+                    if (end <= start) {
+                        return false;
+                    }
+                }
+                return true;
+            }
+
+            // Real-time validation on date input changes
+            startDateInput.on('change', function() {
+                if (!validateDateRange()) {
+                    alert('End date must be after start date');
+                    $(this).focus();
+                }
+            });
+
+            endDateInput.on('change', function() {
+                if (!validateDateRange()) {
+                    alert('End date must be after start date');
+                    $(this).focus();
+                }
+            });
+
+            form.on('submit', function(e) {
+                const hasProject = projectSelect.val();
+                const hasDivision = divisionSelect.val();
+                const hasCbslClient = cbslClientSelect.val();
+
+                // Validate at least one filter is selected
+                if (!hasProject && !hasDivision && !hasCbslClient) {
+                    e.preventDefault();
+                    alert('Please select at least one filter: Project, Division, or CBSL Client');
+                    return false;
+                }
+
+                // Validate date range
+                if (!validateDateRange()) {
+                    e.preventDefault();
+                    alert('End date must be after start date');
+                    return false;
+                }
+            });
+        });
+    </script>
+</body>
+</html>

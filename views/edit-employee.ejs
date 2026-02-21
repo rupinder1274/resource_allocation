@@ -1,0 +1,47 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Edit Employee</title>
+  <link rel="stylesheet" href="/stylesheets/styles.css">
+</head>
+<body>
+  <div class="container">
+    <h1>✏️ Edit Employee - <%= employee.empCode %></h1>
+
+    <form method="POST" action="/employees/<%= employee.empCode %>/edit">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+
+      <label>Emp Code:</label>
+      <input type="text" name="empCode" value="<%= employee.empCode %>" required>
+
+      <label>Resource Name:</label>
+      <input type="text" name="name" value="<%= employee.name %>" required>
+
+      <label>Payroll Company:</label>
+      <input type="text" name="payrollCompany" value="<%= employee.payrollCompany %>">
+
+      <label>Division:</label>
+      <input type="text" name="division" value="<%= employee.division %>">
+
+      <label>Location:</label>
+      <input type="text" name="location" value="<%= employee.location %>">
+
+      <label>Designation:</label>
+      <input type="text" name="designation" value="<%= employee.designation %>">
+
+      <label>Home Practice:</label>
+      <input type="text" name="homePractice" value="<%= employee.homePractice %>">
+
+      <label>Practice Manager:</label>
+      <input type="text" name="practiceManager" value="<%= employee.practiceManager %>">
+
+      <button type="submit">💾 Save Changes</button>
+    </form>
+
+    <div style="text-align:center; margin-top:15px;">
+      <a href="/dashboard/admin">⬅ Back to Dashboard</a>
+    </div>
+  </div>
+</body>
+</html>

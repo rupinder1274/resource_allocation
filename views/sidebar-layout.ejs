@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>SETU</title>
+  
+  <!-- Favicon -->
+  <link rel="icon" type="image/jpeg" href="/logo.jpg">
+  <link rel="shortcut icon" type="image/jpeg" href="/logo.jpg">
+  <link rel="apple-touch-icon" href="/logo.jpg">
+  
+  <!-- Tailwind (shared across pages) -->
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <!-- Chart.js (shared) -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <link rel="stylesheet" href="/stylesheets/styles.css">
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', sans-serif;
+      transition: margin-left 0.3s ease;
+      background: #f5fafd;
+    }
+
+    .sidebar {
+      width: 230px;
+      background: #2c3e50;
+      color: white;
+      height: 100vh;
+      position: fixed;
+      top: 0;
+      left: -230px; /* hidden by default */
+      padding-top: 30px;
+      box-shadow: 4px 0 12px rgba(0, 0, 0, 0.1);
+      transition: left 0.3s ease;
+      z-index: 1000;
+    }
+
+    .sidebar.active {
+      left: 0; /* visible when active */
+    }
+
+    .sidebar h2 {
+      text-align: center;
+      font-size: 22px;
+      margin-bottom: 30px;
+    }
+
+    .sidebar a {
+      display: block;
+      color: white;
+      padding: 12px 20px;
+      text-decoration: none;
+      font-size: 15px;
+      transition: background 0.3s ease;
+    }
+
+    .sidebar a:hover {
+      background: #34495e;
+    }
+
+    .sidebar a.active {
+      background: #3498db;
+      border-left: 4px solid #fff;
+      padding-left: 16px;
+    }
+
+    .main-content {
+      padding: 40px;
+      margin-left: 0;
+      transition: margin-left 0.3s ease;
+      min-height: 100vh;
+    }
+
+    .main-content.shifted {
+      margin-left: 230px;
+    }
+
+    #sidebar-toggle {
+      position: fixed;
+      top: 50%;
+      left: 0;
+      transform: translateY(-50%);
+      background-color: #2c3e50;
+      color: white;
+      font-size: 18px;
+      padding: 10px 6px;
+      border-radius: 0 4px 4px 0;
+      cursor: pointer;
+      z-index: 1100;
+      transition: left 0.3s ease, transform 0.3s ease;
+    }
+
+    .sidebar.active + #sidebar-toggle {
+      left: 230px;
+      transform: translateY(-50%) rotate(180deg);
+    }
+
+    /* Dropdown Styles */
+    .dropdown-container {
+      position: relative;
+    }
+
+    .dropdown-toggle {
+      display: block;
+      color: white;
+      padding: 12px 20px;
+      text-decoration: none;
+      font-size: 15px;
+      transition: background 0.3s ease;
+      cursor: pointer;
+      position: relative;
+    }
+
+    .dropdown-toggle:after {
+      content: "▶";
+      position: absolute;
+      right: 20px;
+      transition: transform 0.3s ease;
+      font-size: 12px;
+    }
+
+    .dropdown-toggle.active:after {
+      transform: rotate(90deg);
+    }
+
+    .dropdown-toggle:hover {
+      background: #34495e;
+    }
+
+    .dropdown-toggle.active {
+      background: #3498db;
+      border-left: 4px solid #fff;
+      padding-left: 16px;
+    }
+
+    .dropdown-menu {
+      display: none;
+      background: #34495e;
+      margin-left: 0;
+      border-left: 2px solid #3498db;
+    }
+
+    .dropdown-menu.show {
+      display: block;
+    }
+
+    .dropdown-item {
+      display: block;
+      color: #ecf0f1;
+      padding: 10px 25px;
+      text-decoration: none;
+      font-size: 14px;
+      transition: background 0.3s ease;
+      border-left: none;
+    }
+
+    .dropdown-item:hover {
+      background: #3498db;
+      color: white;
+    }
+
+    .dropdown-item.active {
+      background: #18bc9c;
+      color: white;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+
+
+  <div class="sidebar" id="sidebar">
+    <% if (typeof manager !== 'undefined' && manager) { %>
+      <h2> Manager Panel</h2>
+      <!-- <a href="/dashboard/manager/schedule">🛠 Schedule</a> -->
+       <a href="/dashboard/manager">Dashboard</a>
+      <a href="/dashboard/manager/calendar-view">Allocations</a>
+      <!-- <a href="/project-allocation-report">Allocation Report</a> -->
+      
+      <a href="/logout">Logout</a>
+    <% } else { %>
+      <h2> Admin Panel</h2>
+  <a href="/dashboard/admin">Dashboard</a>
+  <a href="/calendar-view"> Allocations</a>
+  <!-- <a href="/project-allocation-report">Dashboard</a> -->
+  <a href="/audit-logs">Audit Logs</a>
+  
+  <!-- Master Data Dropdown -->
+  <div class="dropdown-container">
+    <a href="#" class="dropdown-toggle" id="masterDataToggle">Masters</a>
+    <div class="dropdown-menu" id="masterDataMenu">
+      <a href="/dashboard/admin/view-employees" class="dropdown-item"> Employee Master</a>
+      <a href="/view-project-master" class="dropdown-item"> Project Master</a>
+      <a href="/view-practice-master" class="dropdown-item"> Practice Master</a>
+    </div>
+  </div>
+  
+  <a href="/view-users">Users</a>
+      
+      <!-- <a href="/upload-employees">⬆ Upload Employees</a>
+      <a href="/upload-project-master">⬆ Upload Project Master</a>
+      <a href="/upload-practice-master">⬆ Upload Practice Master</a> -->
+      <a href="/logout">Logout</a>
+    <% } %>
+  </div>
+
+  <div id="sidebar-toggle">&#x25B6;</div> <!-- ▶ initially -->
+
+  <div class="main-content" id="main-content">
+    <%- body %>
+  </div>
+
+  <script>
+    const toggleBtn = document.getElementById('sidebar-toggle');
+    const sidebar = document.getElementById('sidebar');
+    const mainContent = document.getElementById('main-content');
+
+    toggleBtn.addEventListener('click', () => {
+      sidebar.classList.toggle('active');
+      mainContent.classList.toggle('shifted');
+    });
+
+    // Dropdown functionality
+    const masterDataToggle = document.getElementById('masterDataToggle');
+    const masterDataMenu = document.getElementById('masterDataMenu');
+
+    masterDataToggle.addEventListener('click', (e) => {
+      e.preventDefault();
+      masterDataToggle.classList.toggle('active');
+      masterDataMenu.classList.toggle('show');
+    });
+
+    // Close dropdown when clicking outside
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('.dropdown-container')) {
+        masterDataToggle.classList.remove('active');
+        masterDataMenu.classList.remove('show');
+      }
+    });
+
+    // Highlight active page based on current URL
+    function highlightActivePage() {
+      const currentPath = window.location.pathname;
+      const sidebarLinks = document.querySelectorAll('.sidebar a');
+      const dropdownItems = document.querySelectorAll('.dropdown-item');
+      
+      // Remove active class from all links
+      sidebarLinks.forEach(link => link.classList.remove('active'));
+      dropdownItems.forEach(item => item.classList.remove('active'));
+      
+      // Find and highlight the matching link
+      let foundExactMatch = false;
+      sidebarLinks.forEach(link => {
+        const href = link.getAttribute('href');
+        if (href && currentPath === href) {
+          link.classList.add('active');
+          foundExactMatch = true;
+        }
+      });
+      
+      // Check dropdown items
+      dropdownItems.forEach(item => {
+        const href = item.getAttribute('href');
+        if (href && currentPath === href) {
+          item.classList.add('active');
+          // Also show the dropdown and highlight the main toggle
+          masterDataToggle.classList.add('active');
+          masterDataMenu.classList.add('show');
+          foundExactMatch = true;
+        }
+      });
+      
+      // Special cases for partial matches when no exact match found
+      if (!foundExactMatch) {
+        if (currentPath.includes('/dashboard/manager')) {
+          const dashboardLink = document.querySelector('a[href="/dashboard/manager"]');
+          if (dashboardLink) {
+            dashboardLink.classList.add('active');
+          }
+        }
+        
+        if (currentPath.includes('/dashboard/admin')) {
+          const dashboardLink = document.querySelector('a[href="/dashboard/admin"]');
+          if (dashboardLink) {
+            dashboardLink.classList.add('active');
+          }
+        }
+        
+        // Highlight Project Allocation Report
+        if (currentPath.includes('/project-allocation-report')) {
+          const reportLink = document.querySelector('a[href="/project-allocation-report"]');
+          if (reportLink) {
+            reportLink.classList.add('active');
+          }
+        }
+        
+        // For admin routes that might need highlighting
+        if (currentPath.includes('/view-employees') || currentPath === '/dashboard/admin/view-employees') {
+          const employeesItem = document.querySelector('a[href="/dashboard/admin/view-employees"]');
+          if (employeesItem) {
+            employeesItem.classList.add('active');
+            masterDataToggle.classList.add('active');
+            masterDataMenu.classList.add('show');
+          }
+        }
+        
+        // Highlight Master Data dropdown items for master-related pages
+        if (currentPath.includes('/view-project-master')) {
+          const projectItem = document.querySelector('a[href="/view-project-master"]');
+          if (projectItem) {
+            projectItem.classList.add('active');
+            masterDataToggle.classList.add('active');
+            masterDataMenu.classList.add('show');
+          }
+        }
+        
+        if (currentPath.includes('/view-practice-master')) {
+          const practiceItem = document.querySelector('a[href="/view-practice-master"]');
+          if (practiceItem) {
+            practiceItem.classList.add('active');
+            masterDataToggle.classList.add('active');
+            masterDataMenu.classList.add('show');
+          }
+        }
+      }
+    }
+
+    // Call the function when page loads
+    document.addEventListener('DOMContentLoaded', highlightActivePage);
+  </script>
+</body>
+</html>

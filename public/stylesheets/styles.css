@@ -1,0 +1,417 @@
+.btn.btn-primary[type="submit"] {
+  /* Compact primary submit button */
+  padding: 8px 12px;
+  font-size: 14px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+/* Premium polished UI for HRMS dashboard */
+
+/* Body & layout */
+body {
+  font-family: 'Segoe UI', 'Roboto', sans-serif;
+  background: linear-gradient(135deg, #dff6fd, #f5fafd);
+  color: #333;
+  margin: 0;
+  padding: 20px;
+  line-height: 1.7;
+}
+
+/* Headings */
+h1 {
+  color: #2c3e50;
+  margin-bottom: 30px;
+  font-size: 32px;
+  text-align: center;
+  letter-spacing: 0.5px;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.1);
+}
+
+/* Main container card */
+.container {
+  max-width: 1100px;   /* slightly wider so table fits nicely */
+  margin: 40px auto;
+  background: rgba(255, 255, 255, 0.85);
+  padding: 40px;
+  border-radius: 16px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12);
+  backdrop-filter: blur(8px);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.container:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 16px 50px rgba(0, 0, 0, 0.15);
+}
+
+/* Table container */
+.table-container {
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: auto;  /* allow vertical scroll */
+  max-height: 500px;  /* helps on small screens; desktop won’t scroll thanks to compact size */
+  margin-top: 25px;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+  background: rgba(255, 255, 255, 0.95);
+}
+
+/* Links */
+a {
+  color: #3498db;
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.2s ease, transform 0.2s ease;
+}
+
+a:hover {
+  color: #1f6391;
+  transform: translateY(-1px);
+}
+
+/* Form styling */
+form {
+  margin-top: -1px;
+}
+
+label {
+  font-weight: 600;
+  display: block;
+  margin-bottom: 8px;
+  color: #34495e;
+}
+
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="file"],
+select {
+  padding: 12px;
+  width: 100%;
+  margin-bottom: 20px;
+  border: 1px solid #ccc;
+  border-radius: 10px;
+  font-size: 15px;
+  box-sizing: border-box;
+  background: rgba(255, 255, 255, 0.9);
+  transition: border-color 0.3s, box-shadow 0.3s;
+}
+
+input:focus,
+select:focus {
+  border-color: #3498db;
+  box-shadow: 0 0 8px rgba(52, 152, 219, 0.4);
+  outline: none;
+}
+
+/* Buttons: gradient + neumorphism touch */
+/* Align date pickers with Apply button */
+.date-input-group {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+/* Ensure date range form controls and the search button are vertically centered */
+#dateRangeForm {
+  align-items: center; /* center inputs and button vertically */
+}
+
+#dateRangeForm .date-input-group {
+  flex-direction: column;
+  justify-content: center;
+}
+
+#dateRangeForm input[type="month"],
+#dateRangeForm .form-control {
+  padding: 8px 10px;
+  height: 40px;
+  font-size: 14px;
+  border-radius: 8px;
+}
+
+#dateRangeForm button.btn {
+  margin: 0; /* remove top margin so it aligns */
+  height: 40px;
+  padding: 0 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+button {
+  background: linear-gradient(90deg, #3498db, #2980b9);
+  color: #fff;
+  padding: 8px 12px; /* compact padding */
+  font-size: 14px; /* slightly smaller */
+  border: none;
+  border-radius: 8px; /* moderate rounding */
+  cursor: pointer;
+  font-weight: 500;
+  box-shadow: 0 4px 12px rgba(52, 152, 219, 0.25);
+  transition: transform 0.15s ease, box-shadow 0.2s ease, background 0.2s ease;
+  display: inline-flex;
+  align-items: center; /* align icon + text */
+  justify-content: center;
+  gap: 8px; /* consistent spacing between icon and label */
+  line-height: 1; /* avoid extra vertical spacing */
+}
+
+button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(52, 152, 219, 0.30);
+  background: linear-gradient(90deg, #2f7fb0, #2a6f99); /* slightly darker, subtle */
+}
+
+button:active {
+  transform: scale(0.995);
+}
+
+/* Centralized .btn class rules to cover inline/view-level button classes */
+.btn {
+  padding: 8px 12px;
+  font-size: 14px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  line-height: 1;
+  cursor: pointer;
+  border: 1px solid transparent;
+  background-color: #f3f4f6;
+  color: #0f172a;
+  font-weight: 600;
+  box-shadow: none;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+}
+
+.btn:hover { transform: translateY(-1px); }
+
+.btn-primary {
+  background: linear-gradient(90deg, #3498db, #2980b9) !important;
+  color: #fff !important;
+  border-color: transparent !important;
+}
+
+.btn-sm {
+  padding: 6px 8px;
+  font-size: 13px;
+  border-radius: 6px;
+}
+
+.btn-outline-secondary,
+.btn-outline-danger,
+.btn-outline-info,
+.btn-outline-primary {
+  background: transparent !important;
+  color: inherit !important;
+  border: 1px solid rgba(0,0,0,0.08) !important;
+  padding: 6px 10px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  border-radius: 8px !important;
+}
+
+/* Tables: clean, compact & elegant */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+th, td {
+  padding: 10px 12px;   /* reduced padding to fit without scroll */
+  font-size: 13.5px;    /* smaller font to fit all columns */
+  text-align: left;
+}
+
+th {
+  background: linear-gradient(90deg, #3498db, #2980b9);
+  color: #fff;
+  font-weight: 600;
+  font-size: 13.5px;
+}
+
+th {
+  position: sticky;
+  top: 0;
+  z-index: 2; /* ensure header stays above rows */
+}
+
+tr:nth-child(even) {
+  background-color: rgba(239, 246, 251, 0.6);
+}
+
+tr:hover {
+  background-color: #e3f2fd;
+  transition: background-color 0.2s ease;
+}
+
+/* Action links & buttons inside tables */
+.actions a, .actions button {
+  margin-right: 6px;
+  margin-bottom: 4px;
+  display: inline-flex; /* keep icon and text aligned */
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #3498db;
+  padding: 6px 8px;
+  border-radius: 6px;
+}
+
+.actions button {
+  background: none;
+  border: none;
+  padding: 6px 8px;
+  color: #e74c3c;
+  cursor: pointer;
+}
+
+.actions button:hover {
+  text-decoration: underline;
+}
+
+/* Icon utilities for consistent sizing/alignment */
+.btn .icon,
+button .icon,
+.calendar-header-btn .icon,
+.actions .icon {
+  display: inline-flex;
+  width: 1em;
+  height: 1em;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 1em;
+}
+
+/* Also target plain <i> icons used in templates so they align without adding extra classes */
+button i,
+.btn i,
+.actions i,
+.calendar-header-btn i {
+  display: inline-flex;
+  width: 1em;
+  height: 1em;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 1em;
+  font-size: 0.95em;
+}
+
+/* Responsive design */
+/* Uniform header buttons for calendar view */
+.calendar-header-btn {
+  /* compact uniform header buttons for calendar view */
+  min-width: 140px;
+  height: 40px;
+  padding: 0 16px;
+  font-size: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  gap: 8px;
+}
+
+/* Toolbar buttons (search bar actions) - make them visually equal */
+.toolbar-btn {
+  background: linear-gradient(90deg, #3498db, #2980b9);
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 15px;
+  min-width: 140px; /* ensures equal width */
+  height: 42px; /* consistent height */
+  padding: 0 14px; /* horizontal padding will not change min-width */
+  border-radius: 8px;
+  text-decoration: none;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 6px 14px rgba(52,152,219,0.18);
+}
+
+.toolbar-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 18px rgba(52,152,219,0.22);
+}
+
+/* Align search input with toolbar buttons in the search bar */
+.search-bar {
+  display: flex; /* ensure flex layout */
+  gap: 10px;
+  align-items: center; /* vertical center items */
+}
+
+.search-bar input#liveSearchInput,
+.search-bar input[type="text"] {
+  height: 42px; /* match toolbar button height */
+  padding: 0 14px; /* comfortable left/right padding */
+  border-radius: 8px;
+  box-sizing: border-box;
+  font-size: 15px;
+  line-height: 42px; /* vertically center placeholder/text */
+  margin: 0; /* reset any inline margins */
+}
+
+.search-bar .toolbar-btn {
+  margin: 0; /* use gap on .search-bar for spacing */
+  align-self: center; /* ensure vertical centering */
+}
+
+/* Ensure anchors inside search-bar don't carry inline top margins */
+.search-bar a,
+.search-bar button {
+  margin-top: 0 !important;
+}
+@media (max-width: 768px) {
+  .container {
+    padding: 20px;
+    margin: 20px;
+  }
+
+  table, thead, tbody, th, td, tr {
+    display: block;
+  }
+
+  th {
+    display: none;
+  }
+
+  td {
+    position: relative;
+    padding-left: 50%;
+    text-align: right;
+  }
+
+  td::before {
+    content: attr(data-label);
+    position: absolute;
+    left: 15px;
+    top: 12px;
+    font-weight: bold;
+    color: #34495e;
+  }
+}
+
+#projectModal {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: 1000;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  box-sizing: border-box;
+}

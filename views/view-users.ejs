@@ -1,0 +1,321 @@
+<!-- views/view-users.ejs -->
+
+<h1>User Management</h1>
+<div style="margin-top: 30px;">
+  <div style="display: flex; align-items: center; justify-content: space-between;">
+    <h3 style="margin: 0;">👥 User Management</h3>
+    <button id="createUserBtn" onclick="openCreateUserModal()" style="background: #3498db; color: white; padding: 8px 18px; border: none; border-radius: 5px; cursor: pointer; font-size: 15px; margin-left: 20px;">
+      👤 Create User
+    </button>
+  </div>
+  
+  <% if (users && users.length > 0) { %>
+    <table style="width: 100%; border-collapse: collapse; border: 1px solid #ddd; margin-top: 15px;">
+      <thead>
+        <tr style="background: #f4f4f4;">
+          <th style="border: 1px solid #ddd; padding: 12px; text-align: left;">Email</th>
+          <th style="border: 1px solid #ddd; padding: 12px; text-align: left;">Role</th>
+          <th style="border: 1px solid #ddd; padding: 12px; text-align: left;">Created on</th>
+          <th style="border: 1px solid #ddd; padding: 12px; text-align: center;">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% users.forEach(user => { %>
+          <tr>
+            <td style="border: 1px solid #ddd; padding: 12px;"><%= user.email %></td>
+            <td style="border: 1px solid #ddd; padding: 12px;">
+              <span style="color: white; padding: 3px 8px; border-radius: 3px; font-size: 12px; background:<%= user.role === 'admin' ? '#e74c3c' : '#27ae60' %>;">
+                <%= user.role.toUpperCase() %>
+              </span>
+            </td>
+            <td style="border: 1px solid #ddd; padding: 12px;">
+              <%= user.createdAt ? new Date(user.createdAt).toLocaleDateString() : ' ' %>
+            </td>
+            <td style="border: 1px solid #ddd; padding: 12px; text-align: center;">
+              <button onclick="openResetPasswordModal('<%= user._id %>', '<%= user.email %>')" 
+                      style="background: #f39c12; color: white; padding: 5px 10px; border: none; border-radius: 3px; cursor: pointer; margin-right: 5px; font-size: 12px;">
+                🔑 Reset Password
+              </button>
+              <button onclick="deleteUser('<%= user._id %>', '<%= user.email %>')" 
+                      style="background: #e74c3c; color: white; padding: 5px 10px; border: none; border-radius: 3px; cursor: pointer; font-size: 12px;">
+                🗑️ Delete
+              </button>
+            </td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  <% } else { %>
+    <p style="color: #666; font-style: italic;">No users found in the database.</p>
+  <% } %>
+</div>
+
+<!-- Create User Modal -->
+<div id="createUserModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000;">
+  <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); min-width: 400px;">
+    <h3 style="margin-top: 0; margin-bottom: 12px; color: #2c3e50; font-size: 18px;">Create New User</h3>
+    
+    <!-- Error display -->
+    <div id="createUserError" style="display: none; color: red; margin-bottom: 10px; padding: 8px; background: #ffe6e6; border-radius: 4px; font-size: 13px;"></div>
+    
+    <!-- Success display -->
+    <div id="createUserSuccess" style="display: none; color: green; margin-bottom: 10px; padding: 8px; background: #e6ffe6; border-radius: 4px; font-size: 13px;"></div>
+    
+    <form id="createUserForm">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      
+      <div style="margin-bottom: 10px;">
+        <label style="display: block; margin-bottom: 3px; font-weight: bold; font-size: 13px;">Email*:</label>
+        <input type="email" name="email" required style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;" />
+      </div>
+      
+      <div style="margin-bottom: 10px;">
+        <label style="display: block; margin-bottom: 3px; font-weight: bold; font-size: 13px;">Password*:</label>
+        <input type="password" name="password" id="password" required minlength="6" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;" />
+      </div>
+
+      <div style="margin-bottom: 10px;">
+        <label style="display: block; margin-bottom: 3px; font-weight: bold; font-size: 13px;">Confirm Password*:</label>
+        <input type="password" name="confirmPassword" id="confirmPassword" required minlength="6" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;" />
+      </div>
+      
+      <div style="margin-bottom: 15px;">
+        <label style="display: block; margin-bottom: 3px; font-weight: bold; font-size: 13px;">Role*:</label>
+        <select name="role" required style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
+          <option value="">-- Select Role --</option>
+          <option value="manager">Manager</option>
+          <option value="admin">Admin</option>
+        </select>
+      </div>
+      
+      <div style="text-align: right;">
+        <button type="button" onclick="closeCreateUserModal()" style="background: #95a5a6; color: white; padding: 6px 16px; border: none; border-radius: 4px; cursor: pointer; margin-right: 8px; font-size: 13px;">
+          Cancel
+        </button>
+        <button type="submit" id="submitUserBtn" style="background: #27ae60; color: white; padding: 6px 16px; border: none; border-radius: 4px; cursor: pointer; font-size: 13px;">
+          Create User
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Reset Password Modal -->
+<div id="resetPasswordModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000;">
+  <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); min-width: 400px;">
+    <h3 style="margin-top: 0; color: #2c3e50;">Reset Password</h3>
+    
+    <!-- Error display -->
+    <div id="resetPasswordError" style="display: none; color: red; margin-bottom: 15px; padding: 10px; background: #ffe6e6; border-radius: 5px;"></div>
+    
+    <!-- Success display -->
+    <div id="resetPasswordSuccess" style="display: none; color: green; margin-bottom: 15px; padding: 10px; background: #e6ffe6; border-radius: 5px;"></div>
+    
+    <p id="resetPasswordUserEmail" style="margin-bottom: 15px; color: #666;"></p>
+    
+    <form id="resetPasswordForm">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <input type="hidden" name="userId" id="resetPasswordUserId" value="">
+      
+      <div style="margin-bottom: 15px;">
+        <label style="display: block; margin-bottom: 5px; font-weight: bold;">New Password*:</label>
+        <input type="password" name="newPassword" required minlength="6" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;" />
+      </div>
+      
+      <div style="margin-bottom: 15px;">
+        <label style="display: block; margin-bottom: 5px; font-weight: bold;">Confirm New Password*:</label>
+        <input type="password" name="confirmPassword" required minlength="6" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;" />
+      </div>
+      
+      <div style="text-align: right;">
+        <button type="button" onclick="closeResetPasswordModal()" style="background: #95a5a6; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; margin-right: 10px;">
+          Cancel
+        </button>
+        <button type="submit" id="submitResetPasswordBtn" style="background: #f39c12; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer;">
+          Reset Password
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+function openCreateUserModal() {
+  document.getElementById('createUserModal').style.display = 'block';
+  document.getElementById('createUserError').style.display = 'none';
+  document.getElementById('createUserSuccess').style.display = 'none';
+  document.getElementById('createUserForm').reset();
+}
+function closeCreateUserModal() {
+  document.getElementById('createUserModal').style.display = 'none';
+}
+document.getElementById('createUserModal').addEventListener('click', function(e) {
+  if (e.target === this) {
+    closeCreateUserModal();
+  }
+});
+document.getElementById('createUserForm').addEventListener('submit', async function(e) {
+  e.preventDefault();
+  const submitBtn = document.getElementById('submitUserBtn');
+  const errorDiv = document.getElementById('createUserError');
+  const successDiv = document.getElementById('createUserSuccess');
+  const password = document.getElementById('password').value;
+  const confirmPassword = document.getElementById('confirmPassword').value;
+  if (password !== confirmPassword) {
+    errorDiv.textContent = 'Passwords do not match';
+    errorDiv.style.display = 'block';
+    return;
+  }
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'Creating...';
+  errorDiv.style.display = 'none';
+  successDiv.style.display = 'none';
+  try {
+    const formData = new FormData(this);
+    const urlParams = new URLSearchParams();
+    for (const [key, value] of formData.entries()) {
+      urlParams.append(key, value);
+    }
+    const response = await fetch('/admin/create-user', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: urlParams.toString()
+    });
+    const contentType = response.headers.get('content-type');
+    let result;
+    if (contentType && contentType.includes('application/json')) {
+      result = await response.json();
+    } else {
+      const htmlText = await response.text();
+      throw new Error('Server returned an error page. Please check your permissions.');
+    }
+    if (response.ok) {
+      successDiv.textContent = 'User created successfully!';
+      successDiv.style.display = 'block';
+      this.reset();
+      setTimeout(() => {
+        closeCreateUserModal();
+        location.reload();
+      }, 2000);
+    } else {
+      errorDiv.textContent = result.error || 'Failed to create user';
+      errorDiv.style.display = 'block';
+    }
+  } catch (error) {
+    console.error('Error creating user:', error);
+    errorDiv.textContent = 'Network error. Please try again.';
+    errorDiv.style.display = 'block';
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Create User';
+  }
+});
+function openResetPasswordModal(userId, userEmail) {
+  document.getElementById('resetPasswordModal').style.display = 'block';
+  document.getElementById('resetPasswordUserId').value = userId;
+  document.getElementById('resetPasswordUserEmail').textContent = 'Resetting password for: ' + userEmail;
+  document.getElementById('resetPasswordError').style.display = 'none';
+  document.getElementById('resetPasswordSuccess').style.display = 'none';
+  document.getElementById('resetPasswordForm').reset();
+  document.getElementById('resetPasswordUserId').value = userId;
+}
+function closeResetPasswordModal() {
+  document.getElementById('resetPasswordModal').style.display = 'none';
+}
+document.getElementById('resetPasswordModal').addEventListener('click', function(e) {
+  if (e.target === this) {
+    closeResetPasswordModal();
+  }
+});
+document.getElementById('resetPasswordForm').addEventListener('submit', async function(e) {
+  e.preventDefault();
+  const submitBtn = document.getElementById('submitResetPasswordBtn');
+  const errorDiv = document.getElementById('resetPasswordError');
+  const successDiv = document.getElementById('resetPasswordSuccess');
+  const newPassword = this.newPassword.value;
+  const confirmPassword = this.confirmPassword.value;
+  if (newPassword !== confirmPassword) {
+    errorDiv.textContent = 'Passwords do not match';
+    errorDiv.style.display = 'block';
+    return;
+  }
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'Resetting...';
+  errorDiv.style.display = 'none';
+  successDiv.style.display = 'none';
+  try {
+    const formData = new FormData(this);
+    const urlParams = new URLSearchParams();
+    for (const [key, value] of formData.entries()) {
+      urlParams.append(key, value);
+    }
+    const response = await fetch('/admin/reset-password', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: urlParams.toString()
+    });
+    const contentType = response.headers.get('content-type');
+    let result;
+    if (contentType && contentType.includes('application/json')) {
+      result = await response.json();
+    } else {
+      throw new Error('Server returned an error page. Please check your permissions.');
+    }
+    if (response.ok) {
+      successDiv.textContent = 'Password reset successfully!';
+      successDiv.style.display = 'block';
+      this.reset();
+      setTimeout(() => {
+        closeResetPasswordModal();
+      }, 2000);
+    } else {
+      errorDiv.textContent = result.error || 'Failed to reset password';
+      errorDiv.style.display = 'block';
+    }
+  } catch (error) {
+    console.error('Error resetting password:', error);
+    errorDiv.textContent = 'Network error. Please try again.';
+    errorDiv.style.display = 'block';
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Reset Password';
+  }
+});
+async function deleteUser(userId, userEmail) {
+  if (!confirm(`Are you sure you want to delete user: ${userEmail}?\n\nThis action cannot be undone.`)) {
+    return;
+  }
+  try {
+    const formData = new URLSearchParams();
+    formData.append('_csrf', '<%= csrfToken %>');
+    formData.append('userId', userId);
+    const response = await fetch('/admin/delete-user', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: formData.toString()
+    });
+    const contentType = response.headers.get('content-type');
+    let result;
+    if (contentType && contentType.includes('application/json')) {
+      result = await response.json();
+    } else {
+      throw new Error('Server returned an error page. Please check your permissions.');
+    }
+    if (response.ok) {
+      alert('User deleted successfully!');
+      location.reload();
+    } else {
+      alert('Error: ' + (result.error || 'Failed to delete user'));
+    }
+  } catch (error) {
+    console.error('Error deleting user:', error);
+    alert('Network error. Please try again.');
+  }
+}
+</script>

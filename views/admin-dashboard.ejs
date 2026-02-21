@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Admin Dashboard</title>
+  
+  <!-- Favicon -->
+  <link rel="icon" type="image/jpeg" href="/logo.jpg">
+  <link rel="shortcut icon" type="image/jpeg" href="/logo.jpg">
+  <link rel="apple-touch-icon" href="/logo.jpg">
+  
+  <link rel="stylesheet" href="/stylesheets/styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <style>
+    .dashboard-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+    .dashboard-header-left a,
+    .dashboard-header-right a {
+      font-size: 15px;
+    }
+    thead th {
+      position: sticky;
+      top: 0;
+      z-index: 2;
+    }
+    .search-bar {
+      margin-bottom: 20px;
+    }
+    .pagination {
+      margin-top: 20px;
+      display: flex;
+      justify-content: center;
+    }
+    .pagination a,
+    .pagination span {
+      margin: 0 5px;
+      padding: 5px 10px;
+      background: #2c3e50;
+      color: white;
+      text-decoration: none;
+      border-radius: 5px;
+    }
+    .pagination .active {
+      background: #18bc9c;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+
+
+  <!-- Search + Upload Employees + Add Employee Button -->
+  <form class="search-bar" method="GET" action="/dashboard/admin/view-employees" style="margin-bottom: 15px; display: flex; gap: 10px; align-items: center;">
+    <input type="text" id="liveSearchInput" placeholder="🔍Search employees..." style="width: 220px; min-width: 0;" />
+  <a href="/upload-employees" class="toolbar-btn">📤 Upload Employees</a>
+  <a href="/employees/add" class="toolbar-btn">➕ Add Employee</a>
+    <button type="button" id="exportExcelBtn" class="toolbar-btn" style="border: none;">📥 Excel</button>
+      <button id="bulkDeleteBtn" class="toolbar-btn" style="display: none;">🗑 Delete Selected</button>
+  </form>
+
+  <!-- Table -->
+  <div class="table-container">
+    <table>
+      <thead>
+        <tr>
+          <th><input type="checkbox" id="selectAll" style="cursor: pointer;"></th>
+          <th>Emp Code</th>
+          <th>Name</th>
+          <th>Payroll Company</th>
+          <th>Division</th>
+          <th>Location</th>
+          <th>Designation</th>
+          <th>Home Practice</th>
+          <th>Practice Manager</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="employeeTableBody">
+        <% employees.forEach(employee => { %>
+          <tr>
+            <td><input type="checkbox" class="row-checkbox" value="<%= employee.empCode %>" style="cursor: pointer;"></td>
+            <td><%= employee.empCode %></td>
+            <td>👤 <%= employee.name %></td>
+            <td><%= employee.payrollCompany %></td>
+            <td><%= employee.division %></td>
+            <td><%= employee.location %></td>
+            <td><%= employee.designation %></td>
+            <td><%= employee.homePractice %></td>
+            <td><%= employee.practiceManager %></td>
+            <td class="actions">
+              <form action="/employees/<%= employee.empCode %>/edit" method="get" style="display:inline;">
+                <button type="submit" style="background: #3498db; color: #222; border: none; border-radius: 5px; padding: 5px 12px; cursor: pointer; font-size: 14px;">✏ Edit</button>
+              </form> |
+                <a href="#" onclick="deleteEmployee('<%= employee.empCode %>')" style="color: red; font-size: 22px; vertical-align: middle; text-decoration: none;">🗑</a>
+            </td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+  const csrfToken = "<%= csrfToken %>";
+  const searchInput = document.getElementById('liveSearchInput');
+  const tableBody = document.getElementById('employeeTableBody');
+
+  searchInput.addEventListener('input', async function () {
+    const query = this.value;
+    const response = await fetch(`/api/employees/search?q=${encodeURIComponent(query)}`);
+    const data = await response.json();
+
+    tableBody.innerHTML = '';
+
+    if (!data.employees.length) {
+      tableBody.innerHTML = '<tr><td colspan="10" style="text-align:center;">No employees found.</td></tr>';
+      return;
+    }
+
+    data.employees.forEach(emp => {
+      tableBody.innerHTML += `
+        <tr>
+          <td><input type="checkbox" class="row-checkbox" value="${emp.empCode}" style="cursor: pointer;"></td>
+          <td>${emp.empCode}</td>
+          <td>👤 ${emp.name}</td>
+          <td>${emp.payrollCompany}</td>
+          <td>${emp.division}</td>
+          <td>${emp.location}</td>
+          <td>${emp.designation}</td>
+          <td>${emp.homePractice}</td>
+          <td>${emp.practiceManager}</td>
+          <td class="actions">
+            <form action="/employees/${emp.empCode}/edit" method="get" style="display:inline;">
+              <button type="submit" style="background: #3498db; color: #222; border: none; border-radius: 5px; padding: 5px 12px; cursor: pointer; font-size: 14px;">✏ Edit</button>
+            </form> |
+            <button type="button" class="delete-btn" data-emp-code="${emp.empCode}" style="background: none; border: none; color: #e74c3c; font-size: 22px; vertical-align: middle; cursor: pointer;">🗑️</button>
+          </td>
+        </tr>`;
+    });
+    // Re-initialize checkbox handlers after search
+    updateCheckboxHandlers();
+    updateBulkDeleteButton();
+    attachDeleteHandlers();
+  });
+
+  function deleteEmployee(empCode) {
+    if (confirm("Are you sure you want to delete this employee?")) {
+      fetch(`/employees/${empCode}/delete`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'CSRF-Token': csrfToken
+        }
+      })
+      .then(res => {
+        if (res.ok) {
+          location.reload();
+        } else {
+          alert("❌ Failed to delete employee.");
+        }
+      });
+    }
+  }
+
+  // Attach delete handler to all delete buttons
+  function attachDeleteHandlers() {
+    const deleteBtns = document.querySelectorAll('.delete-btn');
+    deleteBtns.forEach(btn => {
+      btn.onclick = function() {
+        const empCode = this.getAttribute('data-emp-code');
+        deleteEmployee(empCode);
+      };
+    });
+  }
+
+  // Attach handlers on page load
+  attachDeleteHandlers();
+
+  // Bulk delete functionality
+  function updateCheckboxHandlers() {
+    // Handle "select all" checkbox
+    const selectAll = document.getElementById('selectAll');
+    const rowCheckboxes = document.querySelectorAll('.row-checkbox');
+    
+    selectAll.onchange = function() {
+      rowCheckboxes.forEach(checkbox => {
+        checkbox.checked = this.checked;
+      });
+      updateBulkDeleteButton();
+    };
+    
+    // Handle individual row checkboxes
+    rowCheckboxes.forEach(checkbox => {
+      checkbox.onchange = function() {
+        updateSelectAllState();
+        updateBulkDeleteButton();
+      };
+    });
+  }
+  
+  function updateSelectAllState() {
+    const selectAll = document.getElementById('selectAll');
+    const rowCheckboxes = document.querySelectorAll('.row-checkbox');
+    const checkedBoxes = document.querySelectorAll('.row-checkbox:checked');
+    
+    if (checkedBoxes.length === 0) {
+      selectAll.indeterminate = false;
+      selectAll.checked = false;
+    } else if (checkedBoxes.length === rowCheckboxes.length) {
+      selectAll.indeterminate = false;
+      selectAll.checked = true;
+    } else {
+      selectAll.indeterminate = true;
+    }
+  }
+  
+  function updateBulkDeleteButton() {
+    const checkedBoxes = document.querySelectorAll('.row-checkbox:checked');
+    const bulkDeleteBtn = document.getElementById('bulkDeleteBtn');
+    
+    bulkDeleteBtn.style.display = checkedBoxes.length > 0 ? 'inline-block' : 'none';
+  }
+  
+  function bulkDeleteEmployees() {
+    const checkedBoxes = document.querySelectorAll('.row-checkbox:checked');
+    const empCodes = Array.from(checkedBoxes).map(cb => cb.value);
+    
+    if (empCodes.length === 0) {
+      alert('Please select employees to delete.');
+      return;
+    }
+    
+    if (confirm(`Are you sure you want to delete ${empCodes.length} selected employee(s)?`)) {
+      fetch('/employees/bulk-delete', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'CSRF-Token': csrfToken
+        },
+        body: JSON.stringify({ empCodes: empCodes })
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          location.reload();
+        } else {
+          alert('Error deleting employees: ' + data.message);
+        }
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        alert('Error deleting employees');
+      });
+    }
+  }
+  
+  // Initialize bulk delete functionality
+  document.getElementById('bulkDeleteBtn').onclick = bulkDeleteEmployees;
+  
+  // Initialize checkbox handlers on page load
+  document.addEventListener('DOMContentLoaded', function() {
+    updateCheckboxHandlers();
+    updateBulkDeleteButton();
+  });
+
+  // Export to Excel functionality
+  document.getElementById('exportExcelBtn').onclick = function() {
+    function tableToExcel(table, filename = '') {
+      let downloadLink;
+      let dataType = 'application/vnd.ms-excel';
+      let tableHTML = table.outerHTML.replace(/ /g, '%20');
+      filename = filename ? filename + '.xls' : 'export.xls';
+      downloadLink = document.createElement('a');
+      document.body.appendChild(downloadLink);
+      if (navigator.msSaveOrOpenBlob) {
+        let blob = new Blob(['\ufeff', tableHTML], { type: dataType });
+        navigator.msSaveOrOpenBlob(blob, filename);
+      } else {
+        downloadLink.href = 'data:' + dataType + ', ' + tableHTML;
+        downloadLink.download = filename;
+        downloadLink.click();
+      }
+      document.body.removeChild(downloadLink);
+    }
+    const table = document.querySelector('.table-container table');
+    tableToExcel(table, 'Employees');
+  };
+</script>
+
+</body>
+</html>

@@ -1,0 +1,567 @@
+
+
+<%
+// Calculate total possible hours in the selected month range
+let year, month;
+if (typeof fromMonthFilter !== 'undefined' && fromMonthFilter) {
+    const parts = fromMonthFilter.split('-');
+    if (parts.length === 2) {
+        year = parseInt(parts[0], 10);
+        month = parseInt(parts[1], 10);
+    } 
+} else {
+    const today = new Date();
+    year = today.getFullYear();
+    month = today.getMonth() + 1;
+}
+
+// Calculate total possible hours across the date range
+let totalPossibleHours = 0;
+if (dateRange && dateRange.length) {
+    dateRange.forEach(date => {
+        let parts = date.split('-');
+        let day = parseInt(parts[0], 10);
+        let monthShort = parts[1];
+        let yearFromDate = parseInt(parts[2], 10); // Get the actual year from the date
+        let monthNum = new Date(Date.parse(monthShort + " 1, 2020")).getMonth();
+        let d = new Date(yearFromDate, monthNum, day); // Use the correct year
+        let dow = d.getDay();
+        if (dow !== 0 && dow !== 6) { // Skip weekends
+            totalPossibleHours += 8;
+        }
+    });
+}
+
+// Aggregate total hours per employee across all their schedules
+const empAggregates = {};
+const empDayTotals = {}; // { empCode: { date: totalHours } }
+schedules.forEach(s => {
+    const empCode = s.employee?.empCode || 'N/A';
+    if (!empAggregates[empCode]) empAggregates[empCode] = { total: 0 };
+    if (!empDayTotals[empCode]) empDayTotals[empCode] = {};
+    if (s.dailyHours && dateRange) {
+        dateRange.forEach(date => {
+            const h = s.dailyHours[date] !== undefined ? Number(s.dailyHours[date]) : 0;
+            empAggregates[empCode].total += h;
+            if (!empDayTotals[empCode][date]) empDayTotals[empCode][date] = 0;
+            empDayTotals[empCode][date] += h;
+        });
+    }
+});
+%>
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Manager Assigned Schedules</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.datatables.net/2.0.8/css/dataTables.dataTables.min.css">
+    <style>
+        body { padding-top: 32px; background: #f8fafc; }
+        .container { max-width: 1300px; }
+        .table thead th { background: #e3f2fd; color: #1976d2; font-weight: 600; border-bottom: 2px solid #90caf9; }
+        /* Removed table striping except for weekend columns */
+        /* Removed table row hover effect */
+        .weekend-col { background: #ececec !important; }
+        .resource-name { background: #fff3cd !important; color: black ; padding: 8px; }
+        .btn-primary, .btn-success, .btn-info { border-radius: 10px; font-weight: 500; padding: 8px 12px; }
+        /* custom assign button color */
+        .btn-assign {
+            background: #3498db;
+            color: #ffffff;
+            border: none;
+            border-radius: 10px;
+            padding: 8px 14px;
+            box-shadow: 0 6px 18px rgba(52,152,219,0.18);
+            transition: transform .12s, box-shadow .12s, filter .12s;
+        }
+        .btn-assign:hover {
+            /* Keep background and text color unchanged on hover */
+            background: #3498db !important;
+            color: #ffffff !important;
+            transform: translateY(-2px);
+            box-shadow: 0 10px 22px rgba(52,152,219,0.22);
+        }
+        .btn-assign:focus {
+            outline: none;
+            box-shadow: 0 10px 22px rgba(52,152,219,0.24);
+            background: #3498db !important;
+            color: #ffffff !important;
+        }
+        .btn-assign:active { 
+            transform: translateY(0);
+            background: #3498db !important;
+            color: #ffffff !important;
+        }
+        .form-label { font-weight: 500; color: #1976d2; }
+        .form-select, .form-control { border-radius: 8px; }
+        .page-title { font-size: 2.6rem; font-weight: 800; color: #1976d2; }
+        .filter-card { background: #e3f2fd; border-radius: 10px; padding: 18px 24px; margin-bottom: 24px; }
+        .table-responsive { border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); background: #fff; }
+    /* Export button uses the same .btn-assign styles as the Filter button */
+    /* Removed custom #exportExcelBtn styles so .btn-assign takes effect */
+        .select2-container .select2-selection--single {
+            min-height: 38px;
+            height: 38px;
+            box-sizing: border-box;
+            position: relative;
+            padding-right: 2.2em !important; /* space for clear icon */
+        }
+        .select2-selection__clear {
+            color: #d27219 !important;
+            font-size: 1.2rem !important;
+            opacity: 0.8;
+            position: absolute;
+            right: 0.8em;
+            top: 0%;
+            transform: translateY(-10%);
+            margin: 0 !important;
+            cursor: pointer;
+            transition: color 0.2s;
+            z-index: 2;
+            background: none !important;
+            border: none !important;
+            box-shadow: none !important;
+            pointer-events: auto;
+        }
+        .select2-selection__clear:hover {
+            color: #1565c0 !important;
+            opacity: 1;
+        }
+
+        /* Checkbox styling */
+        .form-check-input {
+            margin: 0 auto;
+            display: block;
+        }
+        .form-check-input:focus {
+            box-shadow: 0 0 0 0.2rem rgba(25, 118, 210, 0.25);
+        }
+        
+        /* Bulk delete button styling */
+        #bulkDeleteBtn {
+            background: #dc3545 !important;
+            border-color: #dc3545 !important;
+            color: #fff !important;
+            border-radius: 10px;
+            font-weight: 500;
+        }
+        #bulkDeleteBtn:hover {
+            background: #c82333 !important;
+            border-color: #bd2130 !important;
+        }
+
+        /* Read-only hours input styling */
+        .hours-cell input[readonly] {
+            background-color: #f8f9fa !important;
+            cursor: not-allowed !important;
+            opacity: 0.8;
+        }
+        .weekend-col input[readonly] {
+            background-color: #ececec !important;
+        }
+
+        @media (max-width: 576px) {
+            .select2-container .select2-selection--single {
+                padding-right: 2rem !important;
+            }
+            .select2-selection__clear {
+                right: 2rem;
+                font-size: 4rem !important;
+            }
+        }
+    </style>
+</head>
+
+<body class="bg-light">
+
+<div class="container mt-5">
+    <form class="d-flex mb-3 align-items-center" method="get" action="/dashboard/manager/assigned-resources">
+        <label for="fromMonth" class="form-label me-2 mb-0">From Month:</label>
+        <input type="month" id="fromMonth" name="fromMonth" class="form-control me-2" style="max-width:180px;" value="<%= typeof fromMonthFilter !== 'undefined' ? fromMonthFilter : '' %>">
+        <label for="toMonth" class="form-label me-2 mb-0">To Month:</label>
+        <input type="month" id="toMonth" name="toMonth" class="form-control me-2" style="max-width:180px;" value="<%= typeof toMonthFilter !== 'undefined' ? toMonthFilter : '' %>">
+        <button type="submit" class="btn btn-assign me-2" style="white-space:nowrap;">Go</button>
+    <a href="/dashboard/manager/schedule" class="btn btn-assign ms-auto" style="white-space:nowrap;">Allocate</a>
+    </form>
+
+    <h1 class="page-title text-center mb-4">Manager Assigned Schedules</h1>
+
+    <div class="filter-card mb-4">
+        <form class="row g-3" method="get" action="/dashboard/manager/assigned-resources">
+            <!-- Hidden fields to preserve month filter when using other filters -->
+            <% if (typeof fromMonthFilter !== 'undefined' && fromMonthFilter) { %>
+                <input type="hidden" name="fromMonth" value="<%= fromMonthFilter %>">
+            <% } %>
+            <% if (typeof toMonthFilter !== 'undefined' && toMonthFilter) { %>
+                <input type="hidden" name="toMonth" value="<%= toMonthFilter %>">
+            <% } %>
+            <div class="col-md-4">
+                <label for="employeeFilter" class="form-label">Employee</label>
+                <select id="employeeFilter" name="employee" class="form-select">
+                    <option value="">All Employees</option>
+                    <% allEmployees?.forEach(emp => { %>
+                        <option value="<%= emp.empCode %>" <%= (employeeFilter === emp.empCode ? 'selected' : '') %>>
+                            <%= emp.empCode %> - <%= emp.name %>
+                            <!-- <% if (emp.division) { %> | <%= emp.division %> <% } %>
+                            <% if (emp.designation) { %> | <%= emp.designation %> <% } %> -->
+                        </option>
+                    <% }) %>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label for="projectFilter" class="form-label">Project</label>
+               <select id="projectFilter" name="project" class="form-select">
+    <option value="">All Projects</option>
+    <% allProjects?.forEach(proj => { %>
+        <option value="<%= proj.projectName %>" <%= (projectFilter === proj.projectName ? 'selected' : '') %>>
+            <%= proj.projectName %>
+            <!-- | Manager: <%= proj.projectManager %>
+            | CBSL: <%= proj.cbslClient %>
+            | DIH: <%= proj.dihClient %> -->
+        </option>
+    <% }) %>
+</select>
+                 
+            </div>
+            <div class="col-md-4 d-flex align-items-end">
+                <button type="submit" class="btn btn-assign" style="white-space:nowrap;">Filter</button>
+                <a href="/dashboard/manager/assigned-resources" class="btn btn-assign ms-2" style="white-space:nowrap;">Reset</a>
+            </div>
+        </form>
+    </div>
+
+    <div class="card mb-4 p-3 d-flex justify-content-center align-items-center">
+        <div class="d-flex gap-2">
+            <button class="btn btn-danger shadow-sm" id="bulkDeleteBtn" style="display: none;">Delete Selected</button>
+            <button class="btn btn-assign shadow-sm" id="exportExcelBtn">Export to Excel</button>
+            <a href="/dashboard/manager/calendar-view" class="btn btn-assign">Calendar View</a>
+        </div>
+    </div>
+
+    <div class="table-responsive">
+        <table id="assignedSchedulesTable" class="table table-bordered align-middle shadow-sm">
+            <thead>
+                <tr>
+                    <th>Emp Code</th>
+                        <th>Resource Name</th>
+                        <th>Practice</th>
+                        <th>Practice Manager</th>
+                        <th>Project Assigned</th>
+                        <th>CBSL Client</th>
+                        <th>Division</th>
+                        
+                    <% if (dateRange && dateRange.length) { dateRange.forEach(function(date) { 
+                        // Always show all days, but highlight weekends
+                        let parts = date.split('-');
+                        let day = parseInt(parts[0], 10);
+                        let monthShort = parts[1];
+                        let yearFromDate = parseInt(parts[2], 10); // Get the actual year from the date
+                        let monthNum = new Date(Date.parse(monthShort + " 1, 2020")).getMonth();
+                        let d = new Date(yearFromDate, monthNum, day); // Use the correct year
+                        let dow = d.getDay();
+                    %>
+                        <th class="<%= (dow === 0 || dow === 6) ? 'weekend-col' : '' %>"><%= date %></th>
+                    <% }); } %>
+                    <th>Total Hours</th>
+                    <th>Total Possible Hours</th>
+                    <th>Actions</th>
+                    <th>
+                        <input type="checkbox" id="selectAll" class="form-check-input">
+                    </th>
+                </tr>
+            </thead>
+            <tbody>
+                <% schedules.forEach(s => {
+                    const empCode = s.employee?.empCode || 'N/A';
+                    let totalHours = 0;
+                %>
+                <tr id="row-<%= s._id %>">
+                        <td><%= empCode %></td>
+                        <td class="resource-name">
+                            <%= s.employee?.name || 'N/A' %>
+                        </td>
+                        <td><%= s.employee?.homePractice || 'N/A' %></td>
+                        <td><%= s.employee?.practiceManager || 'N/A' %></td>
+                        <td class="project-cell"><span><%= s.project?.projectName || 'N/A' %></span></td>
+                        <td><%= s.project?.cbslClient || 'N/A' %></td>
+                        <td><%= s.project?.dihClient || 'N/A' %></td>
+                        
+                    <% dateRange?.forEach(date => {
+                        // Always show all days, but highlight weekends
+                        let parts = date.split('-');
+                        let day = parseInt(parts[0], 10);
+                        let monthShort = parts[1];
+                        let yearFromDate = parseInt(parts[2], 10); // Get the actual year from the date
+                        let monthNum = new Date(Date.parse(monthShort + " 1, 2020")).getMonth();
+                        let d = new Date(yearFromDate, monthNum, day); // Use the correct year
+                        let dow = d.getDay();
+                        const h = (s.dailyHours && s.dailyHours[date] !== undefined && s.dailyHours[date] != 0) ? Number(s.dailyHours[date]) : 0;
+                        totalHours += h;
+                        let cellClass = (dow === 0 || dow === 6) ? 'weekend-col ' : '';
+                        const isWeekend = (dow === 0 || dow === 6);
+                    %>
+                        <td class="hours-cell <%= cellClass.trim() %>" data-date="<%= date %>">
+                            <% if (isWeekend) { %>
+                                <input type="number" min="0" max="8" class="form-control form-control-sm" value="<%= h !== 0 ? h : '' %>" 
+                                    data-rowid="<%= s._id %>" data-date="<%= date %>" style="width:60px; background:#ececec;" readonly tabindex="-1" />
+                            <% } else { %>
+                                <input type="number" min="0" max="8" class="form-control form-control-sm" value="<%= h !== 0 ? h : '' %>" 
+                                    data-rowid="<%= s._id %>" data-date="<%= date %>" style="width:60px;" readonly tabindex="-1" />
+                            <% } %>
+                        </td>
+                    <% }) %>
+                    <td><%= totalHours %></td>
+                    <td><%= totalPossibleHours %></td>
+                    <td class="action-cell">
+                        <button class="btn btn-sm btn-danger" onclick="deleteSchedule('<%= s._id %>')">Delete</button>
+                    </td>
+                    <td>
+                        <input type="checkbox" class="form-check-input row-checkbox" value="<%= s._id %>">
+                    </td>
+                </tr>
+                <% }); %>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Scripts -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdn.datatables.net/2.0.8/js/dataTables.min.js"></script>
+
+<!-- Select2 for searchable dropdowns -->
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+<script>
+    $(document).ready(function () {
+          $('#employeeFilter').select2({
+            width: '100%',
+            placeholder: 'Select Employee',
+            allowClear: true
+        });
+        $('#projectFilter').select2({
+            width: '100%',
+            placeholder: 'Select Project',
+            allowClear: true
+        });
+
+        $('#assignedSchedulesTable').DataTable({
+            scrollX: false,
+            // Removed the length (entries-per-page) control. Show search box on the left instead.
+            // lengthMenu left in config for future reuse but it will not be shown because 'l' is removed from DOM.
+            lengthMenu: [[25, 50, 100, -1], [25, 50, 100, 'All']],
+            pageLength: -1,
+            // Place the search ('f') control on the left where the length selector used to be.
+            dom: "<'row mb-2 mt-3'<'col-md-6 d-flex align-items-center'f><'col-md-6 d-flex justify-content-end'>>" +
+                 "<'row'<'col-12'tr>>" +
+                 "<'row mt-2'<'col-md-5'i><'col-md-7'p>>"
+        });
+    });
+
+    document.getElementById('exportExcelBtn').addEventListener('click', function () {
+        const table = document.getElementById('assignedSchedulesTable');
+        const clone = table.cloneNode(true);
+        
+        // Remove actions column from header
+        clone.querySelector('thead tr').removeChild(clone.querySelector('thead tr').lastElementChild);
+        // Remove checkbox column from header  
+        clone.querySelector('thead tr').removeChild(clone.querySelector('thead tr').lastElementChild);
+        
+        // Remove actions and checkbox columns from body rows
+        clone.querySelectorAll('tbody tr').forEach(row => {
+            row.removeChild(row.lastElementChild); // Remove checkbox column
+            row.removeChild(row.lastElementChild); // Remove actions column
+        });
+        
+        clone.querySelectorAll('td, th').forEach(cell => {
+            // If cell contains an input, use its value
+            const input = cell.querySelector('input');
+            if (input) {
+                cell.innerHTML = input.value;
+            } else if (cell.querySelector('span')) {
+                cell.innerHTML = cell.querySelector('span').textContent;
+            }
+        });
+
+        const ws = XLSX.utils.table_to_sheet(clone);
+        ws['!cols'] = Array.from(clone.querySelectorAll('thead th')).map(th => ({ wch: Math.max(12, th.textContent.length + 2) }));
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Assigned Schedules");
+        XLSX.writeFile(wb, "assigned_schedules.xlsx");
+    });
+
+
+    // --- Drag-fill logic disabled for read-only table ---
+    /*
+    let isDragging = false;
+    let dragValue = null;
+    let $startInput = null;
+    $(document).on('mousedown', '.drag-fill-hours', function (e) {
+        isDragging = true;
+        dragValue = $(this).val();
+        $startInput = $(this);
+        $(this).addClass('drag-filling');
+    });
+    $(document).on('mouseenter', '.drag-fill-hours', function (e) {
+        if (isDragging && $startInput && $(this).closest('tr').is($startInput.closest('tr'))) {
+            // Only fill if not readonly (i.e., not a weekend cell)
+            if (!$(this).prop('readonly')) {
+                $(this).val(dragValue).addClass('drag-filling');
+                $(this).trigger('change'); // auto-save on drag
+            }
+        }
+    });
+    $(document).on('mouseup.dragfill', function () {
+        if (isDragging) {
+            isDragging = false;
+            dragValue = null;
+            $startInput = null;
+            $('.drag-filling').removeClass('drag-filling');
+        }
+    });
+    */
+
+    // --- Auto-save disabled for read-only table ---
+    /*
+    $(document).on('change', '.drag-fill-hours', function () {
+        const $input = $(this);
+        const rowId = $input.data('rowid');
+        const date = $input.data('date');
+        const prevValue = $input.data('prev') !== undefined ? $input.data('prev') : $input.prop('defaultValue');
+        const value = Number($input.val()) || 0;
+        // Collect all dailyHours for this row
+        const dailyHours = {};
+        $input.closest('tr').find('.drag-fill-hours').each(function () {
+            dailyHours[$(this).data('date')] = Number($(this).val()) || 0;
+        });
+        // Project name (read-only)
+        const project = $input.closest('tr').find('.project-cell span').text().trim();
+
+        // --- Validation: Prevent >8 hours per employee per day ---
+        // Find all rows for this employee and sum hours for this date
+        const empCode = $input.closest('tr').find('td').first().text().trim();
+        let totalDayHours = 0;
+        $('#assignedSchedulesTable tbody tr').each(function () {
+            const $row = $(this);
+            const rowEmpCode = $row.find('td').first().text().trim();
+            if (rowEmpCode === empCode) {
+                $row.find('.drag-fill-hours').each(function () {
+                    if ($(this).data('date') === date) {
+                        totalDayHours += Number($(this).val()) || 0;
+                    }
+                });
+            }
+        });
+        if (totalDayHours > 8) {
+            alert('Total hours for this employee on ' + date + ' exceed 8! Please adjust.');
+            $input.val(prevValue);
+            return;
+        }
+
+        $.ajax({
+            url: '/dashboard/manager/assigned-resources/' + rowId,
+            type: 'PUT',
+            contentType: 'application/json',
+            data: JSON.stringify({ project: { projectName: project }, dailyHours }),
+            success: function () {},
+            error: function (xhr) {
+                alert(xhr.responseJSON?.error || 'Error saving data');
+            }
+        });
+    });
+
+    // Track previous value for each input - disabled for read-only
+    $(document).on('focus', '.drag-fill-hours', function () {
+        $(this).data('prev', $(this).val());
+    });
+    */
+
+    // Bulk delete functionality
+    $(document).ready(function() {
+        // Select/Deselect all checkboxes
+        $('#selectAll').on('change', function() {
+            $('.row-checkbox').prop('checked', this.checked);
+            toggleBulkDeleteButton();
+        });
+
+        // Handle individual checkbox changes
+        $(document).on('change', '.row-checkbox', function() {
+            // Update select all checkbox state
+            const totalCheckboxes = $('.row-checkbox').length;
+            const checkedCheckboxes = $('.row-checkbox:checked').length;
+            
+            $('#selectAll').prop('checked', totalCheckboxes === checkedCheckboxes);
+            $('#selectAll').prop('indeterminate', checkedCheckboxes > 0 && checkedCheckboxes < totalCheckboxes);
+            
+            toggleBulkDeleteButton();
+        });
+
+        // Show/hide bulk delete button based on selection
+        function toggleBulkDeleteButton() {
+            const checkedCount = $('.row-checkbox:checked').length;
+            if (checkedCount > 0) {
+                $('#bulkDeleteBtn').show().text(`Delete Selected (${checkedCount})`);
+            } else {
+                $('#bulkDeleteBtn').hide();
+            }
+        }
+
+        // Bulk delete action
+        $('#bulkDeleteBtn').on('click', function() {
+            const selectedIds = $('.row-checkbox:checked').map(function() {
+                return this.value;
+            }).get();
+
+            if (selectedIds.length === 0) {
+                alert('Please select at least one schedule to delete.');
+                return;
+            }
+
+            const confirmMessage = `Are you sure you want to delete ${selectedIds.length} selected schedule(s)?`;
+            if (confirm(confirmMessage)) {
+                // Show loading state
+                $(this).prop('disabled', true).text('Deleting...');
+
+                // Use the bulk delete endpoint for manager
+                $.ajax({
+                    url: '/dashboard/manager/assigned-resources/bulk-delete',
+                    type: 'POST',
+                    data: { 'ids[]': selectedIds },
+                    success: function(response) {
+                        if (response.success) {
+                            location.reload();
+                        } else {
+                            alert(response.error || 'Error deleting schedules');
+                            $('#bulkDeleteBtn').prop('disabled', false).text('Delete Selected');
+                        }
+                    },
+                    error: function(xhr) {
+                        const errorMsg = xhr.responseJSON?.error || 'Error deleting schedules. Please try again.';
+                        alert(errorMsg);
+                        $('#bulkDeleteBtn').prop('disabled', false).text('Delete Selected');
+                    }
+                });
+            }
+        });
+    });
+
+    function deleteSchedule(id) {
+        if (confirm("Are you sure you want to delete this schedule?")) {
+            $.ajax({
+                url: '/dashboard/manager/assigned-resources/' + id,
+                type: 'DELETE',
+                success: function () { location.reload(); },
+                error: function (xhr) {
+                    alert(xhr.responseJSON?.error || 'Error deleting data');
+                }
+            });
+        }
+    }
+</script>
+
+</body>
+</html>

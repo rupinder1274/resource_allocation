@@ -1,0 +1,4333 @@
+<% // manager-calendar-view.ejs - Manager Resource Calendar View
+// Assumes variables: year, month, dateRange, allEmployees, empDayProjects are provided from the server
+%>
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Manager Resource Planning Board</title>
+  
+  <!-- Favicon -->
+  <link rel="icon" type="image/jpeg" href="/logo.jpg">
+  <link rel="shortcut icon" type="image/jpeg" href="/logo.jpg">
+  <link rel="apple-touch-icon" href="/logo.jpg">
+  
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet">
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+</head>
+<body>
+
+<!-- Wave Loading Overlay (Outside main content) -->
+<div id="waveLoadingOverlay" class="wave-loading-overlay show" style="display: flex;">
+  <div class="wave-loader-container">
+    <div class="wave-progress-text">
+      <span id="waveProgressPercent">0</span>%
+    </div>
+    <div class="wave-container">
+      <svg class="wave-svg" width="400" height="80" viewBox="0 0 400 80">
+        <!-- Enhanced glow definitions -->
+        <defs>
+          <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+            <feMerge> 
+              <feMergeNode in="coloredBlur"/>
+              <feMergeNode in="SourceGraphic"/>
+            </feMerge>
+          </filter>
+          <filter id="strongGlow" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation="6" result="coloredBlur"/>
+            <feGaussianBlur stdDeviation="3" result="coloredBlur2"/>
+            <feMerge> 
+              <feMergeNode in="coloredBlur"/>
+              <feMergeNode in="coloredBlur2"/>
+              <feMergeNode in="SourceGraphic"/>
+            </feMerge>
+          </filter>
+          <filter id="ultraGlow" x="-100%" y="-100%" width="300%" height="300%">
+            <feGaussianBlur stdDeviation="8" result="coloredBlur"/>
+            <feGaussianBlur stdDeviation="4" result="coloredBlur2"/>
+            <feGaussianBlur stdDeviation="2" result="coloredBlur3"/>
+            <feMerge> 
+              <feMergeNode in="coloredBlur"/>
+              <feMergeNode in="coloredBlur2"/>
+              <feMergeNode in="coloredBlur3"/>
+              <feMergeNode in="SourceGraphic"/>
+            </feMerge>
+          </filter>
+          <linearGradient id="progressGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" style="stop-color:#3182CE;stop-opacity:0.8" />
+            <stop offset="50%" style="stop-color:#63B3ED;stop-opacity:1" />
+            <stop offset="100%" style="stop-color:#90CDF4;stop-opacity:0.8" />
+          </linearGradient>
+        </defs>
+        
+        <!-- Background wave (dimmed/dashed) -->
+        <path id="backgroundWave" 
+              class="wave-background" 
+              d="" 
+              fill="none" 
+              stroke="rgba(99, 179, 237, 0.2)" 
+              stroke-width="4"
+              filter="url(#glow)">
+        </path>
+        
+        <!-- Progress wave (glowing) -->
+        <path id="progressWave" 
+              class="wave-progress" 
+              d="" 
+              fill="none" 
+              stroke="url(#progressGradient)" 
+              stroke-width="6"
+              filter="url(#ultraGlow)"
+              stroke-linecap="round">
+        </path>
+        
+        <!-- Additional glow layer -->
+        <path id="glowWave" 
+              class="wave-glow" 
+              d="" 
+              fill="none" 
+              stroke="#63B3ED" 
+              stroke-width="2"
+              opacity="0.6"
+              filter="url(#strongGlow)">
+        </path>
+      </svg>
+      <div class="wave-progress-glow"></div>
+    </div>
+    <div class="wave-loading-text">
+      <span>Loading Manager Calendar...</span>
+    </div>
+  </div>
+</div>
+
+<div class="container-fluid mt-4" id="mainContent" style="display: none;">
+  <!-- Manager Resource Planning Board header with year and month would go here -->
+<% // Fallbacks for start/end month/year if not provided by backend %>
+  <% var _startYear = typeof startYear !== 'undefined' ? startYear : new Date().getFullYear(); %>
+  <% var _startMonth = typeof startMonth !== 'undefined' ? startMonth : (new Date().getMonth() + 1); %>
+  <% var _endYear = typeof endYear !== 'undefined' ? endYear : new Date().getFullYear(); %>
+  <% var _endMonth = typeof endMonth !== 'undefined' ? endMonth : (new Date().getMonth() + 1); %>
+   <div class="advanced-filter-panel mb-4">
+    <!-- Date Range Section -->
+    <div class="filter-section date-range-section">
+      <div class="d-flex align-items-center flex-wrap gap-3">
+        
+        <form method="get" action="/dashboard/manager/calendar-view" class="d-flex align-items-center gap-2" id="dateRangeForm">
+          <div class="date-input-group">
+            <!-- <label for="startMonth" class="form-label">From</label> -->
+            <input type="month" id="startMonth" name="startMonth" value="<%= _startYear %>-<%= _startMonth.toString().padStart(2, '0') %>" class="form-control">
+          </div>
+          <div class="date-input-group">
+            <!-- <label for="endMonth" class="form-label">To</label> -->
+            <input type="month" id="endMonth" name="endMonth" value="<%= _endYear %>-<%= _endMonth.toString().padStart(2, '0') %>" class="form-control">
+          </div>
+          <button type="submit" class="btn btn-primary" aria-label="Search">
+            <i class="fas fa-search"></i>
+          </button>
+        </form>
+        
+        <div class="filter-actions d-flex align-items-center gap-2">
+          <button id="advancedFilterToggle" class="btn btn-outline-secondary">
+            <i class="fas fa-filter"></i>Filtering & Searching
+            <i class="fas fa-chevron-down toggle-icon"></i>
+          </button>
+          <a href="/dashboard/manager/assigned-resources" class="btn btn-outline-secondary filter-toggle-like">
+            <i class="fas fa-file-excel"></i> Table View
+          </a>
+          <button id="toggleDragFill" class="btn btn-outline-secondary filter-toggle-like">
+            <i class="fas fa-fill"></i> Enable Drag Fill
+          </button>
+            <a href="/dashboard/manager/schedule" class="btn btn-outline-secondary filter-toggle-like">
+              <i class="fas fa-calendar-plus"></i> Allocate
+            </a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Advanced Filters Dropdown -->
+    <div id="advancedFiltersDropdown" class="advanced-filters-dropdown">
+      <div class="filters-container">
+        <div class="row g-3">
+          <!-- Employee Filter -->
+          <div class="col-md-3">
+            <label class="form-label">Employee</label>
+            <select class="form-select filter-select select2-filter" id="employeeFilter" multiple data-filter="employee" 
+                    data-placeholder="Search Employees..." data-source="static">
+              <% allEmployees.forEach(function(emp) { %>
+                <option value="<%= emp.empCode %>"><%= emp.name %> (<%= emp.empCode %>)</option>
+              <% }); %>
+            </select>
+          </div>
+
+          <!-- Projects Filter -->
+          <div class="col-md-3">
+            <label class="form-label">Projects</label>
+            <select class="form-select filter-select select2-filter" id="projectsFilter" multiple data-filter="projects" 
+                    data-placeholder="Search Projects..." data-source="/api/projects" data-source-field="projectName">
+              <!-- Projects will be populated dynamically via AJAX -->
+            </select>
+          </div>
+
+          <!-- Practice Filter -->
+          <div class="col-md-3">
+            <label class="form-label">Practice</label>
+            <select class="form-select filter-select select2-filter" id="practiceFilter" multiple data-filter="practice" 
+                    data-placeholder="Search Practices..." data-source="employee-derived">
+              <!-- Practices will be populated from employee data -->
+            </select>
+          </div>
+
+          <!-- Practice Manager Filter -->
+          <div class="col-md-3">
+            <label class="form-label">Practice Manager</label>
+            <select class="form-select filter-select select2-filter" id="practiceManagerFilter" multiple data-filter="practiceManager" 
+                    data-placeholder="Search Practice Managers..." data-source="employee-derived">
+              <!-- Practice Managers will be populated from employee data -->
+            </select>
+          </div>
+        </div>
+
+        <div class="row g-3 mt-2">
+          <!-- Allocation Status Filter -->
+          <div class="col-md-4">
+            <label class="form-label">Allocation Status</label>
+            <select class="form-select filter-select select2-filter" id="allocationStatusFilter" multiple data-filter="allocationStatus" 
+                    data-placeholder="Search Allocation Status..." data-source="static">
+              <!-- Options will be populated via Select2 data configuration -->
+            </select>
+          </div>
+
+          <!-- Filter Actions -->
+          <div class="col-md-8">
+            <label class="form-label">&nbsp;</label>
+            <div class="d-flex align-items-end gap-2">
+              <button id="applyFilters" class="btn btn-primary">
+                <i class="fas fa-filter"></i> Apply Filters
+              </button>
+              <button id="clearAllFilters" class="btn btn-outline-secondary">
+                <i class="fas fa-times"></i> Clear All
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Applied Filters Display -->
+      <div id="appliedFiltersSection" class="applied-filters-section">
+        <div class="applied-filters-header">
+          <span class="filters-label">Applied Filters:</span>
+          <button id="clearAllTags" class="btn btn-sm btn-outline-danger">
+            <i class="fas fa-times"></i> Clear All
+          </button>
+        </div>
+        <div id="appliedFilterTags" class="applied-filter-tags">
+          <!-- Filter tags will be added here dynamically -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Success/Error Toast -->
+  <div id="toast" class="toast-container" style="position: fixed; top: 20px; right: 20px; z-index: 9999;">
+    <div id="successToast" class="alert alert-success" style="display: none;">
+      <i class="fas fa-check-circle"></i> <span id="successMessage"></span>
+    </div>
+    <div id="errorToast" class="alert alert-danger" style="display: none;">
+      <i class="fas fa-exclamation-circle"></i> <span id="errorMessage"></span>
+    </div>
+  </div>
+
+  <!-- Project Assignment Modal -->
+  <div class="modal fade" id="assignmentModal" tabindex="-1" aria-labelledby="assignmentModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="assignmentModalLabel">Assign Project</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <form id="assignmentForm">
+            <div class="mb-3">
+              <label class="form-label">Employee:</label>
+              <input type="text" id="modalEmployeeName" class="form-control" readonly>
+              <input type="hidden" id="modalEmpCode">
+              <input type="hidden" id="modalDate">
+            </div>
+            
+            <div class="mb-3">
+              <label class="form-label">Date:</label>
+              <input type="text" id="modalDateDisplay" class="form-control" readonly>
+            </div>
+
+            <div class="mb-3">
+              <label for="projectSelect" class="form-label">Project:</label>
+              <select id="projectSelect" class="form-select" required>
+                <option value="">Select a project...</option>
+              </select>
+            </div>
+
+            <div class="mb-3">
+              <label for="hoursInput" class="form-label">Hours:</label>
+              <input type="number" id="hoursInput" class="form-control" min="0.5" max="8" step="0.5" required>
+              <div class="form-text">
+                <span id="remainingHours">Remaining hours: 8</span>
+              </div>
+            </div>
+
+            <div id="existingAssignments" class="mb-3" style="display: none;">
+              <label class="form-label">Current Assignments:</label>
+              <div id="assignmentsList" class="border rounded p-2 bg-light">
+                <!-- Current assignments will be displayed here -->
+              </div>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" id="saveAssignment" class="btn btn-primary">Save Assignment</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Edit Assignment Modal -->
+  <div class="modal fade" id="editModal" tabindex="-1" aria-labelledby="editModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="editModalLabel">Edit Assignment</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <form id="editForm">
+            <div class="mb-3">
+              <label class="form-label">Employee:</label>
+              <input type="text" id="editEmployeeName" class="form-control" readonly>
+              <input type="hidden" id="editEmpCode">
+              <input type="hidden" id="editDate">
+              <input type="hidden" id="editAssignmentId">
+              <input type="hidden" id="editProjectId">
+            </div>
+            
+            <div class="mb-3">
+              <label class="form-label">Date:</label>
+              <input type="text" id="editDateDisplay" class="form-control" readonly>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">Project:</label>
+              <input type="text" id="editProjectName" class="form-control" readonly>
+            </div>
+
+            <div class="mb-3">
+              <label for="editHoursInput" class="form-label">Hours:</label>
+              <input type="number" id="editHoursInput" class="form-control" min="0.5" max="8" step="0.5" required>
+              <div class="form-text">
+                <span id="editRemainingHours">Remaining hours: 8</span>
+              </div>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-danger" id="deleteAssignment">Delete</button>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" id="updateAssignment" class="btn btn-primary">Update</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- Calendar Container with Sticky Header and Sticky First Column -->
+  <div class="calendar-container board-style-calendar">
+    <!-- Calendar Wrapper with proper sticky positioning -->
+    <div class="calendar-wrapper">
+      <!-- Top-left corner cell (sticky in both directions) -->
+      <div class="corner-header">
+        <span>Employee</span>
+      </div>
+      
+      <!-- Sticky header row (scrolls horizontally) -->
+      <div class="sticky-header-row">
+        <% dateRange.forEach(function(date) { 
+             var d = new Date(date);
+             var isWeekend = (d.getDay() === 0 || d.getDay() === 6); // Sunday=0, Saturday=6
+          %>
+          <div class="date-column<%= isWeekend ? ' weekend' : '' %>"><%= date %></div>
+        <% }); %>
+      </div>
+      
+      <!-- Sticky first column (scrolls vertically) -->
+      <div class="sticky-first-column">
+        <% allEmployees.forEach(function(emp, empIndex) { %>
+          <div class="employee-row" data-emp-index="<%= empIndex %>">
+            <div class="emp-cell">
+              <div class="emp-name"><%= emp.name %></div>
+              <div class="emp-meta text-muted small"><%= emp.empCode %> | <%= emp.designation %></div>
+            </div>
+          </div>
+        <% }); %>
+      </div>
+      
+      <!-- Scrollable calendar content -->
+      <div class="calendar-content">
+        <% function getBlockColor(percent) {
+             if (percent >= 100) return '#17befc'; // fully allocated
+             if (percent >= 75) return '#fa686d'; // mostly allocated  
+             if (percent >= 50) return '#fa686d'; //  half allocated
+             if (percent > 0) return '#fa686d'; // partially allocated
+             return '#f8f9fa'; // light gray - empty
+           }
+        %>
+        <% allEmployees.forEach(function(emp, empIndex) { %>
+          <div class="employee-calendar-row" data-emp-index="<%= empIndex %>">
+            <% dateRange.forEach(function(date) { 
+              var blocks = (empDayProjects && empDayProjects[emp.empCode] && empDayProjects[emp.empCode][date]) || [];
+              var totalHours = 0;
+              blocks.forEach(function(block) { totalHours += block.hours; });
+              var percentFilled = Math.min(100, Math.round((totalHours/8)*100));
+              var d = new Date(date);
+              var isWeekend = (d.getDay() === 0 || d.getDay() === 6);
+            %>
+            <div class="calendar-cell<% if (blocks.length === 0 || totalHours === 0) { %> no-task<% } %><%= isWeekend ? ' weekend' : '' %> drop-zone clickable-cell" 
+                data-emp-code="<%= emp.empCode %>" 
+                data-emp-name="<%= emp.name %>"
+                data-date="<%= date %>" 
+                data-total-hours="<%= totalHours %>">
+              <div class="fixed-block sortable-container">
+                <% if (blocks.length > 0 && totalHours > 0) { %>
+                <% blocks.filter(function(block) { return block.hours > 0; }).forEach(function(block, index) { 
+                    // Calculate proportional height based on hours (out of 8 total, with available space of ~54px)
+                    var blockHeightPercent = (block.hours / 8) * 100;
+                    var blockHeightPx = Math.max((block.hours / 8) * 54, 12); // Minimum 12px height
+                    // Ensure minimum height for visibility and text
+                    var minHeight = Math.max(blockHeightPx, 12);
+                  %>
+                    <div class="project-stack-block draggable-block" 
+                         draggable="true"
+                         data-project-id="<%= block.projectId || '' %>"
+                         data-assignment-id="<%= block.assignmentId || '' %>"
+                         data-emp-code="<%= emp.empCode %>"
+                         data-date="<%= date %>"
+                         data-hours="<%= block.hours %>"
+                         data-project-name="<%= block.projectName %>"
+                         style="width:calc(100% - 4px);height:<%= blockHeightPx %>px;min-height:<%= minHeight %>px;
+                                background: <%= getBlockColor(percentFilled) %>;
+                                border-radius:6px;box-shadow:0 1px 3px rgba(0,0,0,0.10);
+                                display:flex;align-items:center;justify-content:space-between;
+                                position:relative;overflow:hidden;transition:all 0.2s;
+                                margin:1px 2px;cursor:grab;flex-shrink:0;
+                                border-bottom: <%= index < blocks.length - 1 ? '1px solid rgba(255,255,255,0.2)' : 'none' %>;"
+                         onclick="event.stopPropagation(); editAssignment(this);"
+                         title="<%= block.projectName %> - <%= block.hours %>h">
+                      <div class="block-content-wrapper" style="display:flex;align-items:center;justify-content:space-between;width:100%;padding:0 8px;">
+                        <span class="block-title" style="color:#212529;text-shadow:none;
+                                                         font-size:<%= block.hours >= 2 ? '0.75em' : '0.65em' %>;
+                                                         white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+                                                         font-weight:600;max-width:70%;line-height:1.2;">
+                          <%= block.hours >= 1.5 ? block.projectName : (block.projectName.length > 10 ? block.projectName.substring(0, 10) + '...' : block.projectName) %>
+                        </span>
+                        <span class="block-hours" style="font-weight:700;color:#212529;text-shadow:none;
+                                                          font-size:<%= block.hours >= 2 ? '0.75em' : '0.65em' %>;
+                                                          line-height:1.2;margin-left:4px;">
+                          <%= block.hours %>h
+                        </span>
+                      </div>
+                    </div>
+                  <% }); %>
+                  <% if (totalHours < 8) { 
+                    var remainingHeightPercent = ((8 - totalHours) / 8) * 100;
+                    var remainingHeightPx = ((8 - totalHours) / 8) * 54;
+                  %>
+                    <div class="remaining-space" 
+                         style="width:calc(100% - 4px);height:<%= remainingHeightPx %>px;min-height:8px;
+                                background:rgba(108, 117, 125, 0.1);
+                                border:2px dashed rgba(108, 117, 125, 0.3);
+                                border-radius:6px;margin:1px 2px;
+                                display:flex;align-items:center;justify-content:center;
+                                font-size:0.65em;color:#6c757d;font-weight:500;
+                                flex-shrink:0;">
+                      <span style="text-align:center;line-height:1.2;">
+                        <% if (remainingHeightPx >= 20) { %>
+                          <i class="fas fa-plus-circle" style="display:block;margin-bottom:2px;font-size:1.1em;"></i>
+                        <% } %>
+                        <%= (8 - totalHours) %>h
+                      </span>
+                    </div>
+                  <% } %>
+                <% } else { %>
+                  <div class="block-content empty-slot" style="position:relative;z-index:2;color:#0c0b0b;
+                                                              padding:8px;font-size:0.85em;text-align:center;
+                                                              width:100%;height:100%;display:flex;
+                                                              flex-direction:column;align-items:center;
+                                                              justify-content:center;">
+                    <i class="fas fa-plus-circle" style="font-size:1.5em;color:#ccc;margin-bottom:4px;"></i>
+                    <span class="block-title">Click to assign</span>
+                  </div>
+                <% } %>
+              </div>
+            </div>
+            <% }); %>
+          </div>
+        <% }); %>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+
+  /* Advanced Filter Panel Styles */
+.advanced-filter-panel {
+  background: #ffffff;
+  border: 1px solid #e9ecef;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.filter-section {
+  margin-bottom: 0;
+}
+
+.date-range-section .d-flex {
+  justify-content: space-between;
+  align-items: center;
+}
+
+.date-input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.date-input-group .form-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 0;
+}
+
+.date-input-group .form-control {
+  min-width: 140px;
+  border-radius: 8px;
+  border: 1px solid #d1d5db;
+  padding: 8px 12px;
+  font-size: 0.875rem;
+  transition: all 0.2s ease;
+}
+
+.date-input-group .form-control:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.filter-actions {
+  flex-wrap: wrap;
+}
+
+#advancedFilterToggle {
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+#advancedFilterToggle:hover {
+  background-color: #f3f4f6;
+  border-color: #9ca3af;
+}
+
+/* Reusable class to make other header actions (like Table View) match the Filtering & Searching button */
+.filter-toggle-like {
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.filter-toggle-like:hover {
+  background-color: #f3f4f6;
+  border-color: #9ca3af;
+}
+
+#advancedFilterToggle.active {
+  background-color: #3b82f6;
+  border-color: #3b82f6;
+  color: white;
+}
+
+.toggle-icon {
+  transition: transform 0.3s ease;
+  margin-left: 8px;
+}
+
+.toggle-icon.rotated {
+  transform: rotate(180deg);
+}
+
+/* Advanced Filters Dropdown */
+.advanced-filters-dropdown {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0ms ease-in-out, padding 0ms ease-in-out;
+  padding: 0 20px;
+  margin: 0 -20px;
+}
+
+.advanced-filters-dropdown.show {
+  max-height: 500px;
+  padding: 20px;
+  border-top: 1px solid #e5e7eb;
+  margin-top: 20px;
+}
+
+.filters-container {
+  opacity: 0;
+  transform: translateY(-10px);
+  transition: opacity 0.3s ease 0.1s, transform 0.3s ease 0.1s;
+}
+
+.advanced-filters-dropdown.show .filters-container {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.filter-select-wrapper {
+  position: relative;
+}
+
+.filter-select {
+  border-radius: 8px;
+  border: 1px solid #d1d5db;
+  padding: 8px 12px;
+  font-size: 0.875rem;
+  transition: all 0.2s ease;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e");
+  background-position: right 8px center;
+  background-repeat: no-repeat;
+  background-size: 16px;
+  padding-right: 36px;
+}
+
+.filter-select:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  outline: none;
+}
+
+.search-input-wrapper {
+  position: relative;
+  margin-top: 8px;
+  display: none;
+}
+
+.filter-select-wrapper:hover .search-input-wrapper,
+.filter-select-wrapper:focus-within .search-input-wrapper,
+.search-input-wrapper:focus-within {
+  display: block;
+}
+
+.filter-search {
+  border-radius: 6px;
+  border: 1px solid #d1d5db;
+  padding: 6px 32px 6px 12px;
+  font-size: 0.8rem;
+  background-color: #f9fafb;
+}
+
+.filter-search:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+  outline: none;
+  background-color: white;
+}
+
+.search-icon {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #9ca3af;
+  font-size: 0.75rem;
+}
+
+/* Applied Filters Section */
+.applied-filters-section {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid #e5e7eb;
+  display: none;
+}
+
+.applied-filters-section.show {
+  display: block;
+  animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.applied-filters-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.filters-label {
+  font-weight: 600;
+  color: #374151;
+  font-size: 0.875rem;
+}
+
+.applied-filter-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.filter-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+  color: white;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2);
+  transition: all 0.2s ease;
+  animation: fadeInScale 0.3s ease;
+}
+
+@keyframes fadeInScale {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.filter-tag:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(59, 130, 246, 0.3);
+}
+
+.filter-tag .remove-tag {
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  color: white;
+  border-radius: 50%;
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.filter-tag .remove-tag:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: scale(1.1);
+}
+
+/* Buttons */
+/* All buttons use #3498db as background and border */
+.btn {
+  border-radius: 8px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #3498db !important;
+  color: #fff !important;
+  border: 1px solid #3498db !important;
+}
+
+
+.btn:hover, .btn:focus {
+  background: #009ee3 !important;
+  color: #fff !important;
+  border-color: #009ee3 !important;
+  transform: translateY(-1px);
+}
+
+.btn-primary,
+.btn-secondary,
+.btn-success,
+.btn-danger,
+.btn-warning,
+.btn-info,
+.btn-outline-secondary,
+.btn-outline-danger {
+  background: #3498db !important;
+  color: #fff !important;
+  border: 1px solid #3498db !important;
+  box-shadow: none !important;
+}
+
+.btn-primary:hover,
+.btn-secondary:hover,
+.btn-success:hover,
+.btn-danger:hover,
+.btn-warning:hover,
+.btn-info:hover,
+.btn-outline-secondary:hover,
+.btn-outline-danger:hover {
+  background: #009ee3 !important;
+  color: #fff !important;
+  border-color: #009ee3 !important;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .advanced-filter-panel {
+    padding: 16px;
+  }
+  
+  .date-range-section .d-flex {
+    flex-direction: column;
+    gap: 16px;
+    align-items: stretch;
+  }
+  
+  .filter-actions {
+    justify-content: center;
+  }
+  
+  .applied-filter-tags {
+    justify-content: center;
+  }
+  
+  .filters-container .row {
+    margin: 0;
+  }
+  
+  .filters-container .col-md-3,
+  .filters-container .col-md-4,
+  .filters-container .col-md-8 {
+    padding: 8px;
+  }
+}
+
+@media (max-width: 576px) {
+  .date-input-group .form-control {
+    min-width: 120px;
+  }
+  
+  .filter-tag {
+    font-size: 0.75rem;
+    padding: 4px 8px;
+  }
+  
+  .btn {
+    padding: 6px 12px;
+    font-size: 0.875rem;
+  }
+}
+
+/* Calendar Cell Allocation Status Highlighting */
+.calendar-cell.fully-allocated {
+  background-color: rgba(34, 197, 94, 0.1);
+  border: 2px solid #22c55e;
+}
+
+.calendar-cell.under-allocated {
+  background-color: rgba(251, 191, 36, 0.1);
+  border: 2px solid #fbbf24;
+}
+
+.calendar-cell.unallocated {
+  background-color: rgba(156, 163, 175, 0.1);
+  border: 2px solid #9ca3af;
+}
+
+.calendar-cell {
+  transition: all 0.3s ease;
+}
+
+/* Select2 Custom Styling */
+.select2-container {
+  width: 100% !important;
+}
+
+.select2-container--bootstrap-5 .select2-selection {
+  border-radius: 8px !important;
+  border: 1px solid #d1d5db !important;
+  font-size: 0.875rem !important;
+  transition: all 0.2s ease !important;
+  min-height: 38px !important;
+}
+
+.select2-container--bootstrap-5 .select2-selection--multiple {
+  padding: 4px !important;
+}
+
+.select2-container--bootstrap-5 .select2-selection:focus {
+  border-color: #3b82f6 !important;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1) !important;
+  outline: none !important;
+}
+
+.select2-container--bootstrap-5 .select2-selection--multiple .select2-selection__choice {
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8) !important;
+  border: none !important;
+  border-radius: 16px !important;
+  color: white !important;
+  font-size: 0.8rem !important;
+  font-weight: 500 !important;
+  padding: 4px 8px !important;
+  margin: 2px !important;
+  box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2) !important;
+}
+
+.select2-container--bootstrap-5 .select2-selection--multiple .select2-selection__choice__remove {
+  color: rgba(255, 255, 255, 0.8) !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.3) !important;
+  margin-right: 6px !important;
+  padding-right: 6px !important;
+}
+
+.select2-container--bootstrap-5 .select2-selection--multiple .select2-selection__choice__remove:hover {
+  color: white !important;
+  background: rgba(255, 255, 255, 0.2) !important;
+  border-radius: 50% !important;
+}
+
+.select2-container--bootstrap-5 .select2-dropdown {
+  border-radius: 8px !important;
+  border: 1px solid #d1d5db !important;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1) !important;
+}
+
+.select2-container--bootstrap-5 .select2-search--dropdown .select2-search__field {
+  border-radius: 6px !important;
+  border: 1px solid #d1d5db !important;
+  padding: 8px 12px !important;
+  font-size: 0.875rem !important;
+}
+
+.select2-container--bootstrap-5 .select2-results__option {
+  padding: 8px 12px !important;
+  font-size: 0.875rem !important;
+}
+
+.select2-container--bootstrap-5 .select2-results__option--highlighted {
+  background: #3b82f6 !important;
+  color: white !important;
+}
+
+.select2-container--bootstrap-5 .select2-selection__placeholder {
+  color: #9ca3af !important;
+  font-style: italic !important;
+}
+/* Wave Loading Overlay Styles */
+.wave-loading-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  z-index: 999999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.4s ease, backdrop-filter 0.4s ease; /* Medium speed transitions */
+  pointer-events: auto;
+}
+
+.wave-loading-overlay.show {
+  opacity: 1;
+}
+
+/* Hide all UI elements during loading */
+.wave-loading-overlay.show ~ * {
+  pointer-events: none;
+}
+
+/* Ensure main content is hidden initially */
+#mainContent {
+  transition: opacity 0.5s ease; /* Medium speed content transition */
+}
+
+/* Prevent any content from showing before overlay */
+body {
+  background: #f8f9fa;
+}
+
+.wave-loader-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 60px 40px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 
+    0 20px 40px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  min-width: 500px;
+  position: relative;
+}
+
+.wave-progress-text {
+  margin-bottom: 30px;
+  font-size: 3.5em;
+  font-weight: 800;
+  color: #63B3ED;
+  text-shadow: 
+    0 0 20px rgba(99, 179, 237, 0.8),
+    0 0 40px rgba(99, 179, 237, 0.6),
+    0 0 60px rgba(99, 179, 237, 0.4);
+  filter: drop-shadow(0 0 15px rgba(99, 179, 237, 0.7));
+  animation: pulseGlow 2s ease-in-out infinite alternate;
+  letter-spacing: 2px;
+}
+
+@keyframes pulseGlow {
+  from {
+    text-shadow: 
+      0 0 20px rgba(99, 179, 237, 0.8),
+      0 0 40px rgba(99, 179, 237, 0.6),
+      0 0 60px rgba(99, 179, 237, 0.4);
+    transform: scale(1);
+  }
+  to {
+    text-shadow: 
+      0 0 30px rgba(99, 179, 237, 1),
+      0 0 60px rgba(99, 179, 237, 0.8),
+      0 0 90px rgba(99, 179, 237, 0.6);
+    transform: scale(1.02);
+  }
+}
+
+.wave-container {
+  margin: 30px 0;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.wave-svg {
+  overflow: visible;
+  display: block;
+}
+
+.wave-progress {
+  stroke: #63B3ED;
+  stroke-width: 5;
+  filter: url(#strongGlow);
+  stroke-dasharray: 600;
+  stroke-dashoffset: 0;
+  animation: waveMove 4s linear infinite, progressGlow 2.5s ease-in-out infinite alternate;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+@keyframes waveMove {
+  0% {
+    stroke-dashoffset: 0;
+  }
+  100% {
+    stroke-dashoffset: -24;
+  }
+}
+
+@keyframes progressGlow {
+  from {
+    stroke: #63B3ED;
+    filter: url(#strongGlow);
+  }
+  to {
+    stroke: #90CDF4;
+    filter: url(#strongGlow);
+  }
+}
+
+.wave-loading-text {
+  margin-top: 25px;
+  font-size: 1.3em;
+  color: rgba(255, 255, 255, 0.95);
+  font-weight: 600;
+  text-shadow: 
+    0 0 10px rgba(255, 255, 255, 0.4),
+    0 0 20px rgba(255, 255, 255, 0.2);
+  animation: fadeInOut 3s ease-in-out infinite alternate;
+  letter-spacing: 1px;
+}
+
+@keyframes fadeInOut {
+  from {
+    opacity: 0.8;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(-2px);
+  }
+}
+
+/* Enhanced glow effects for the wave */
+.wave-progress-glow {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background: linear-gradient(90deg, 
+    transparent 0%, 
+    rgba(99, 179, 237, 0.8) 20%, 
+    rgba(99, 179, 237, 1) 50%, 
+    rgba(99, 179, 237, 0.8) 80%, 
+    transparent 100%);
+  border-radius: 2px;
+  opacity: 0.6;
+  animation: glowPulse 2s ease-in-out infinite alternate;
+}
+
+@keyframes glowPulse {
+  from {
+    opacity: 0.4;
+    transform: scaleY(1);
+  }
+  to {
+    opacity: 0.8;
+    transform: scaleY(1.5);
+  }
+}
+
+/* Mobile responsiveness for wave loader */
+@media (max-width: 768px) {
+  .wave-loader-container {
+    min-width: 350px;
+    padding: 40px 25px;
+  }
+  
+  .wave-progress-text {
+    font-size: 2.8em;
+    margin-bottom: 25px;
+  }
+  
+  .wave-svg {
+    width: 280px;
+    height: 55px;
+  }
+  
+  .wave-loading-text {
+    font-size: 1.1em;
+    margin-top: 20px;
+  }
+}
+
+@media (max-width: 480px) {
+  .wave-loader-container {
+    min-width: 280px;
+    padding: 35px 20px;
+  }
+  
+  .wave-progress-text {
+    font-size: 2.3em;
+    margin-bottom: 20px;
+  }
+  
+  .wave-svg {
+    width: 240px;
+    height: 50px;
+  }
+  
+  .wave-loading-text {
+    font-size: 1em;
+    margin-top: 15px;
+  }
+}
+
+/* Wave loading animations */
+.wave-loading-overlay {
+  opacity: 1;
+  transition: opacity 0.6s ease-in-out;
+}
+
+.wave-loading-overlay.hide {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Calendar Container Layout with Sticky Header and Column */
+.calendar-container {
+  background: #f8f9fa;
+  border-radius: 8px;
+  padding: 16px;
+  position: relative;
+  border: 1px solid #dee2e6;
+  overflow: hidden;
+}
+
+/* Calendar Wrapper - Grid Layout for Sticky Positioning */
+.calendar-wrapper {
+  display: grid;
+  grid-template-areas: 
+    "corner header"
+    "sidebar content";
+  grid-template-columns: 200px 1fr;
+  grid-template-rows: 60px 1fr;
+  height: calc(100vh - 300px); /* Adjust based on your header height */
+  min-height: 600px;
+  background: #fff;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+/* Top-left corner cell (sticky in both directions) */
+.corner-header {
+  grid-area: corner;
+  background: #e9ecef;
+  border-bottom: 2px solid #dee2e6;
+  border-right: 2px solid #dee2e6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 1rem;
+  color: #495057;
+  position: sticky;
+  top: 0;
+  left: 0;
+  z-index: 20;
+  box-shadow: 2px 2px 5px rgba(0,0,0,0.1);
+}
+
+/* Sticky header row (scrolls horizontally) */
+.sticky-header-row {
+  grid-area: header;
+  display: flex;
+  background: #e9ecef;
+  border-bottom: 2px solid #dee2e6;
+  position: sticky;
+  top: 0;
+  z-index: 15;
+  overflow-x: auto;
+  overflow-y: hidden;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.sticky-header-row .date-column {
+  min-width: 120px;
+  max-width: 120px;
+  width: 120px;
+  flex-shrink: 0;
+  text-align: center;
+  font-weight: 500;
+  font-size: 0.9rem;
+  color: #495057;
+  padding: 12px 8px;
+  border-right: 1px solid #dee2e6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 60px;
+}
+
+.sticky-header-row .date-column:last-child {
+  border-right: none;
+}
+
+/* Sticky first column (scrolls vertically) */
+.sticky-first-column {
+  grid-area: sidebar;
+  background: #f8f9fa;
+  border-right: 2px solid #dee2e6;
+  position: sticky;
+  left: 0;
+  z-index: 10;
+  overflow-x: hidden;
+  overflow-y: auto;
+  box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+}
+
+/* Hide scrollbar for sticky-first-column but keep scroll functionality */
+.sticky-first-column {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+}
+.sticky-first-column::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
+}
+
+.sticky-first-column .employee-row {
+  height: 80px;
+  border-bottom: 1px solid #dee2e6;
+  display: flex;
+  align-items: center;
+  background: #f1f3f6;
+}
+
+.sticky-first-column .employee-row:last-child {
+  border-bottom: none;
+}
+
+.sticky-first-column .emp-cell {
+  padding: 12px 16px;
+  width: 100%;
+  text-align: left;
+}
+
+.sticky-first-column .emp-name {
+  font-weight: 600;
+  color: #212529;
+  font-size: 0.95rem;
+  line-height: 1.2;
+  margin-bottom: 4px;
+}
+
+.sticky-first-column .emp-meta {
+  font-size: 0.8rem;
+  color: #6c757d;
+  line-height: 1.1;
+}
+
+/* Scrollable calendar content */
+.calendar-content {
+  grid-area: content;
+  overflow: auto;
+  background: #fff;
+}
+
+.calendar-content .employee-calendar-row {
+  display: flex;
+  height: 80px;
+  border-bottom: 1px solid #dee2e6;
+}
+
+.calendar-content .employee-calendar-row:last-child {
+  border-bottom: none;
+}
+
+/* Calendar Cells */
+.calendar-cell {
+  min-width: 120px;
+  max-width: 120px;
+  width: 120px;
+  height: 80px;
+  border-right: 1px solid #dee2e6;
+  padding: 4px;
+  cursor: pointer;
+  transition: box-shadow 0.15s;
+  background: #fff;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.calendar-cell:last-child {
+  border-right: none;
+}
+
+.calendar-cell:hover {
+  box-shadow: 0 0 0 2px #007bff33;
+  z-index: 2;
+  position: relative;
+}
+
+/* Fixed Block Container */
+.fixed-block {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  background: #f1f3f6;
+  border-radius: 8px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  padding: 2px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.08);
+}
+
+/* Synchronize scrolling between header and content */
+.calendar-wrapper .sticky-header-row::-webkit-scrollbar {
+  height: 0;
+  width: 0;
+}
+
+.calendar-wrapper .calendar-content::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+.calendar-wrapper .calendar-content::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.calendar-wrapper .calendar-content::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 4px;
+}
+
+.calendar-wrapper .calendar-content::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+/* Responsive adjustments for sticky calendar */
+@media (max-width: 768px) {
+  .calendar-wrapper {
+    grid-template-columns: 160px 1fr;
+    height: calc(100vh - 250px);
+  }
+  
+  .sticky-header-row .date-column,
+  .calendar-cell {
+    min-width: 100px !important;
+    max-width: 100px !important;
+    width: 100px !important;
+  }
+  
+  .sticky-header-row .date-column {
+    font-size: 0.8rem;
+    padding: 8px 4px;
+  }
+  
+  .corner-header {
+    font-size: 0.9rem;
+  }
+  
+  .sticky-first-column .emp-name {
+    font-size: 0.85rem;
+  }
+  
+  .sticky-first-column .emp-meta {
+    font-size: 0.7rem !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .calendar-wrapper {
+    grid-template-columns: 140px 1fr;
+    height: calc(100vh - 200px);
+  }
+  
+  .sticky-header-row .date-column,
+  .calendar-cell {
+    min-width: 80px !important;
+    max-width: 80px !important;
+    width: 80px !important;
+  }
+  
+  .sticky-header-row .date-column {
+    font-size: 0.75rem;
+    padding: 6px 2px;
+  }
+  
+  .corner-header {
+    font-size: 0.8rem;
+    padding: 8px;
+  }
+  
+  .sticky-first-column .emp-name {
+    font-size: 0.8rem;
+  }
+  
+  .sticky-first-column .emp-meta {
+    font-size: 0.65rem !important;
+  }
+  
+  .sticky-first-column .emp-cell {
+    padding: 8px 12px;
+  }
+}
+
+/* Legacy styles for compatibility */
+.board-style-calendar {
+  background: #f8f9fa;
+  border-radius: 8px;
+  padding: 16px;
+  overflow-x: auto;
+  position: relative;
+}
+
+.hours-block {
+  display: inline-block;
+  min-width: 32px;
+  border-radius: 6px;
+  padding: 2px 0;
+  font-size: 1rem;
+  font-weight: 500;
+}
+.block-content {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 500;
+  font-size: 0.97em;
+  letter-spacing: 0.01em;
+  color: #212529 !important;
+  text-shadow: none !important;
+}
+
+.block-title {
+  font-weight: 500;
+  font-size: 0.97em;
+  letter-spacing: 0.01em;
+  color: #212529 !important;
+  text-shadow: none !important;
+}
+
+.block-hours {
+  font-size: 0.97em;
+  margin-left: 8px;
+  color: #212529 !important;
+  font-weight: 700;
+  text-shadow: none !important;
+}
+
+.hours-block.empty {
+  background: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+  border-radius: 7px;
+  min-height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Drag and Drop Styles */
+.draggable-block {
+  cursor: grab !important;
+  transition: all 0.2s ease;
+}
+
+.draggable-block:active {
+  cursor: grabbing !important;
+}
+
+.draggable-block.dragging {
+  opacity: 0.5;
+  transform: rotate(5deg);
+  z-index: 1000;
+  box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+}
+
+.drop-zone {
+  transition: all 0.2s ease;
+}
+
+.drop-zone.drag-over {
+  background-color: #e3f2fd !important;
+  border: 2px dashed #2196f3 !important;
+  transform: scale(1.02);
+}
+
+.drop-zone.drag-over .fixed-block {
+  background-color: #e3f2fd !important;
+}
+
+.drop-zone.drag-over-invalid {
+  background-color: #ffebee !important;
+  border: 2px dashed #f44336 !important;
+  transform: scale(1.02);
+}
+
+.drop-zone.drag-over-invalid .fixed-block {
+  background-color: #ffebee !important;
+}
+
+.drop-zone.drag-over-invalid::after {
+  content: '⚠️ EXCEEDS 8H LIMIT';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(244, 67, 54, 0.9);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.7em;
+  font-weight: bold;
+  z-index: 10;
+  white-space: nowrap;
+}
+
+.empty-slot {
+  opacity: 0.6;
+  transition: opacity 0.2s ease;
+}
+
+.drop-zone.drag-over .empty-slot {
+  opacity: 1;
+  color: #2196f3 !important;
+}
+
+/* Additional enhancements */
+.draggable-block[draggable="false"] {
+  opacity: 1;
+}
+
+.draggable-block[draggable="true"]:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+
+.project-stack-block {
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.project-stack-block:hover {
+  transform: translateX(2px);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2) !important;
+  z-index: 5;
+}
+
+/* Enhanced visual feedback for proportional heights */
+.project-stack-block .block-content-wrapper {
+  transition: all 0.2s ease;
+}
+
+.project-stack-block:hover .block-content-wrapper {
+  transform: scale(1.02);
+}
+
+/* Visual depth for stacked blocks */
+.project-stack-block:nth-child(1) { z-index: 4; }
+.project-stack-block:nth-child(2) { z-index: 3; }
+.project-stack-block:nth-child(3) { z-index: 2; }
+.project-stack-block:nth-child(4) { z-index: 1; }
+
+/* Subtle gradient for depth */
+.project-stack-block::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(to bottom, 
+    rgba(255,255,255,0.1) 0%, 
+    rgba(255,255,255,0.05) 50%, 
+    rgba(0,0,0,0.1) 100%);
+  pointer-events: none;
+  border-radius: inherit;
+}
+
+/* Remaining space styling */
+.remaining-space {
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.remaining-space:hover {
+  background: rgba(108, 117, 125, 0.2) !important;
+  border-color: rgba(108, 117, 125, 0.5) !important;
+}
+
+.remaining-space::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 80%;
+  height: 2px;
+  background: rgba(108, 117, 125, 0.3);
+  border-radius: 1px;
+}
+
+/* Better responsive text sizing for different block heights */
+.project-stack-block[style*="height: 54px"] .block-title,
+.project-stack-block[style*="height: 48px"] .block-title,
+.project-stack-block[style*="height: 42px"] .block-title {
+  font-size: 0.8em !important;
+}
+
+.project-stack-block[style*="height: 36px"] .block-title,
+.project-stack-block[style*="height: 30px"] .block-title {
+  font-size: 0.75em !important;
+}
+
+.project-stack-block[style*="height: 24px"] .block-title,
+.project-stack-block[style*="height: 18px"] .block-title,
+.project-stack-block[style*="height: 12px"] .block-title {
+  font-size: 0.65em !important;
+}
+
+.project-stack-block::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(45deg, transparent 40%, rgba(255,255,255,0.1) 50%, transparent 60%);
+  transform: translateX(-100%);
+  transition: transform 0.6s;
+}
+
+.project-stack-block:hover::before {
+  transform: translateX(100%);
+}
+
+.calendar-cell.no-task {
+  border: 2px dashed #ddd;
+  background: #f9f9f9;
+}
+
+.calendar-cell.no-task .empty-slot {
+  font-style: italic;
+  color: #999;
+}
+
+.toast-container .alert {
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  border: none;
+}
+
+#loading-overlay {
+  backdrop-filter: blur(2px);
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .calendar-cell {
+    min-width: 100px !important;
+    max-width: 100px !important;
+    width: 100px !important;
+  }
+  
+  .date-column {
+    min-width: 100px !important;
+    max-width: 100px !important;
+    width: 100px !important;
+    font-size: 0.8rem;
+  }
+  
+  .employee-column {
+    min-width: 160px;
+    max-width: 160px;
+    width: 160px;
+  }
+  
+  .emp-name {
+    font-size: 0.85rem;
+  }
+  
+  .emp-meta {
+    font-size: 0.7rem !important;
+  }
+  
+  .project-stack-block {
+    font-size: 0.9em;
+  }
+  
+  .block-title, .block-hours {
+    font-size: 0.8em !important;
+    padding-left: 6px !important;
+    padding-right: 6px !important;
+  }
+  
+  .dates-header {
+    padding: 8px 0;
+  }
+  
+  .employee-header {
+    padding: 8px 12px;
+  }
+  
+  .emp-cell {
+    padding: 8px 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .employee-column {
+    min-width: 140px;
+    max-width: 140px;
+    width: 140px;
+  }
+  
+  .calendar-cell {
+    min-width: 80px !important;
+    max-width: 80px !important;
+    width: 80px !important;
+  }
+  
+  .date-column {
+    min-width: 80px !important;
+    max-width: 80px !important;
+    width: 80px !important;
+    font-size: 0.75rem;
+  }
+  
+  .emp-name {
+    font-size: 0.8rem;
+  }
+  
+  .emp-meta {
+    font-size: 0.65rem !important;
+  }
+}
+
+/* Drag Fill Styles */
+.drag-fill-mode .calendar-cell {
+  cursor: crosshair !important;
+}
+
+.drag-fill-selection {
+  background: rgba(33, 150, 243, 0.2) !important;
+  border: 2px solid #2196f3 !important;
+  position: relative;
+}
+
+.drag-fill-selection::after {
+  content: '⭐ SOURCE';
+  position: absolute;
+  top: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #2196f3;
+  color: white;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.7em;
+  font-weight: bold;
+  z-index: 10;
+}
+
+.drag-fill-preview {
+  background: rgba(76, 175, 80, 0.3) !important;
+  border: 2px dashed #4caf50 !important;
+  position: relative;
+  animation: dragFillPulse 1s ease-in-out infinite alternate;
+}
+
+.drag-fill-preview::after {
+  content: '✓';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(76, 175, 80, 0.8);
+  color: white;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 0.9em;
+  z-index: 5;
+}
+
+@keyframes dragFillPulse {
+  from {
+    border-color: #4caf50;
+    background: rgba(76, 175, 80, 0.3);
+  }
+  to {
+    border-color: #66bb6a;
+  }
+}
+
+/* Row drag-fill styles */
+.drag-fill-preview-row {
+  background: rgba(255, 193, 7, 0.2) !important;
+  border: 2px dashed #ffc107 !important;
+  position: relative;
+}
+
+.drag-fill-preview-row::after {
+  content: '📋 ROW';
+  position: absolute;
+  top: 50%;
+  right: 5px;
+  transform: translateY(-50%);
+  background: rgba(255, 193, 7, 0.9);
+  color: #212529;
+  padding: 2px 6px;
+  border-radius: 8px;
+  font-size: 0.7em;
+  font-weight: bold;
+  z-index: 5;
+}
+
+/* Source project highlight styles */
+.drag-fill-source-project {
+  background: rgba(220, 53, 69, 0.3) !important;
+  border: 2px solid #dc3545 !important;
+  position: relative;
+  box-shadow: 0 0 10px rgba(220, 53, 69, 0.5);
+}
+
+.drag-fill-source-project::after {
+  content: '🎯 PROJECT';
+  position: absolute;
+  top: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #dc3545;
+  color: white;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.7em;
+  font-weight: bold;
+  z-index: 10;
+}
+
+/* Source row highlight styles */
+.drag-fill-source-row {
+  background: rgba(255, 193, 7, 0.3) !important;
+  border: 2px solid #ffc107 !important;
+  position: relative;
+  box-shadow: 0 0 5px rgba(255, 193, 7, 0.5);
+}
+
+/* Hover highlight for project selection */
+.drag-fill-hover-highlight {
+  background: rgba(75, 192, 192, 0.4) !important;
+  border: 2px solid #4bc0c0 !important;
+  position: relative;
+  box-shadow: 0 0 8px rgba(75, 192, 192, 0.6);
+  transform: scale(1.05);
+  z-index: 15;
+}
+.calendar-cell {
+  cursor: pointer;
+  transition: box-shadow 0.15s;
+  background: #fff;
+}
+.calendar-cell:hover {
+  box-shadow: 0 0 0 2px #007bff33;
+  z-index: 2;
+  position: relative;
+}
+
+/* Drag and Drop Styles */
+.draggable-block {
+  cursor: grab !important;
+  transition: all 0.2s ease;
+}
+
+.draggable-block:active {
+  cursor: grabbing !important;
+}
+
+.draggable-block.dragging {
+  opacity: 0.5;
+  transform: rotate(5deg);
+  z-index: 1000;
+  box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+}
+
+.drop-zone {
+  transition: all 0.2s ease;
+}
+
+.drop-zone.drag-over {
+  background-color: #e3f2fd !important;
+  border: 2px dashed #2196f3 !important;
+  transform: scale(1.02);
+}
+
+.drop-zone.drag-over .fixed-block {
+  background-color: #e3f2fd !important;
+}
+
+.drop-zone.drag-over-invalid {
+  background-color: #ffebee !important;
+  border: 2px dashed #f44336 !important;
+  transform: scale(1.02);
+}
+
+.drop-zone.drag-over-invalid .fixed-block {
+  background-color: #ffebee !important;
+}
+
+.drop-zone.drag-over-invalid::after {
+  content: '⚠️ EXCEEDS 8H LIMIT';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(244, 67, 54, 0.9);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.7em;
+  font-weight: bold;
+  z-index: 10;
+  white-space: nowrap;
+}
+
+.empty-slot {
+  opacity: 0.6;
+  transition: opacity 0.2s ease;
+}
+
+.drop-zone.drag-over .empty-slot {
+  opacity: 1;
+  color: #2196f3 !important;
+}
+
+/* Additional enhancements */
+.draggable-block[draggable="false"] {
+  opacity: 1;
+}
+
+.draggable-block[draggable="true"]:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+
+.project-stack-block {
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.project-stack-block:hover {
+  transform: translateX(2px);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2) !important;
+  z-index: 5;
+}
+
+/* Enhanced visual feedback for proportional heights */
+.project-stack-block .block-content-wrapper {
+  transition: all 0.2s ease;
+}
+
+.project-stack-block:hover .block-content-wrapper {
+  transform: scale(1.02);
+}
+
+/* Visual depth for stacked blocks */
+.project-stack-block:nth-child(1) { z-index: 4; }
+.project-stack-block:nth-child(2) { z-index: 3; }
+.project-stack-block:nth-child(3) { z-index: 2; }
+.project-stack-block:nth-child(4) { z-index: 1; }
+
+/* Subtle gradient for depth */
+.project-stack-block::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(to bottom, 
+    rgba(255,255,255,0.1) 0%, 
+    rgba(255,255,255,0.05) 50%, 
+    rgba(0,0,0,0.1) 100%);
+  pointer-events: none;
+  border-radius: inherit;
+}
+
+/* Remaining space styling */
+.remaining-space {
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.remaining-space:hover {
+  background: rgba(108, 117, 125, 0.2) !important;
+  border-color: rgba(108, 117, 125, 0.5) !important;
+}
+
+.remaining-space::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 80%;
+  height: 2px;
+  background: rgba(108, 117, 125, 0.3);
+  border-radius: 1px;
+}
+
+/* Better responsive text sizing for different block heights */
+.project-stack-block[style*="height: 54px"] .block-title,
+.project-stack-block[style*="height: 48px"] .block-title,
+.project-stack-block[style*="height: 42px"] .block-title {
+  font-size: 0.8em !important;
+}
+
+.project-stack-block[style*="height: 36px"] .block-title,
+.project-stack-block[style*="height: 30px"] .block-title {
+  font-size: 0.75em !important;
+}
+
+.project-stack-block[style*="height: 24px"] .block-title,
+.project-stack-block[style*="height: 18px"] .block-title,
+.project-stack-block[style*="height: 12px"] .block-title {
+  font-size: 0.65em !important;
+}
+
+.project-stack-block::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(45deg, transparent 40%, rgba(255,255,255,0.1) 50%, transparent 60%);
+  transform: translateX(-100%);
+  transition: transform 0.6s;
+}
+
+.project-stack-block:hover::before {
+  transform: translateX(100%);
+}
+
+.calendar-cell.no-task {
+  border: 2px dashed #ddd;
+  background: #f9f9f9;
+}
+
+.calendar-cell.no-task .empty-slot {
+  font-style: italic;
+  color: #999;
+}
+
+.toast-container .alert {
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  border: none;
+}
+
+#loading-overlay {
+  backdrop-filter: blur(2px);
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .calendar-cell {
+    min-width: 80px !important;
+  }
+  
+  .project-stack-block {
+    font-size: 0.9em;
+  }
+  
+  .block-title, .block-hours {
+    font-size: 0.9em !important;
+    padding-left: 8px !important;
+    padding-right: 8px !important;
+  }
+}
+
+/* Drag Fill Styles */
+.drag-fill-mode .calendar-cell {
+  cursor: crosshair !important;
+}
+
+.drag-fill-selection {
+  background: rgba(33, 150, 243, 0.2) !important;
+  border: 2px solid #2196f3 !important;
+  position: relative;
+}
+
+.drag-fill-selection::after {
+  content: '⭐ SOURCE';
+  position: absolute;
+  top: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #2196f3;
+  color: white;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.7em;
+  font-weight: bold;
+  z-index: 10;
+}
+
+.drag-fill-preview {
+  background: rgba(76, 175, 80, 0.3) !important;
+  border: 2px dashed #4caf50 !important;
+  position: relative;
+  animation: dragFillPulse 1s ease-in-out infinite alternate;
+}
+
+.drag-fill-preview::after {
+  content: '✓';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(76, 175, 80, 0.8);
+  color: white;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 0.9em;
+  z-index: 5;
+}
+
+@keyframes dragFillPulse {
+  from {
+    border-color: #4caf50;
+    background: rgba(76, 175, 80, 0.3);
+  }
+  to {
+    border-color: #66bb6a;
+    background: rgba(76, 175, 80, 0.4);
+  }
+}
+
+/* Row drag-fill styles */
+.drag-fill-preview-row {
+  background: rgba(255, 193, 7, 0.2) !important;
+  border: 2px dashed #ffc107 !important;
+  position: relative;
+}
+
+.drag-fill-preview-row::after {
+  content: '📋 ROW';
+  position: absolute;
+  top: 50%;
+  right: 5px;
+  transform: translateY(-50%);
+  background: rgba(255, 193, 7, 0.9);
+  color: #212529;
+  padding: 2px 6px;
+  border-radius: 8px;
+  font-size: 0.7em;
+  font-weight: bold;
+  z-index: 5;
+}
+
+/* Source project highlight styles */
+.drag-fill-source-project {
+  background: rgba(220, 53, 69, 0.3) !important;
+  border: 2px solid #dc3545 !important;
+  position: relative;
+  box-shadow: 0 0 10px rgba(220, 53, 69, 0.5);
+}
+
+.drag-fill-source-project::after {
+  content: '🎯 PROJECT';
+  position: absolute;
+  top: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #dc3545;
+  color: white;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.7em;
+  font-weight: bold;
+  z-index: 10;
+}
+
+/* Source row highlight styles */
+.drag-fill-source-row {
+  background: rgba(255, 193, 7, 0.3) !important;
+  border: 2px solid #ffc107 !important;
+  position: relative;
+  box-shadow: 0 0 5px rgba(255, 193, 7, 0.5);
+}
+
+/* Hover highlight for project selection */
+.drag-fill-hover-highlight {
+  background: rgba(75, 192, 192, 0.4) !important;
+  border: 2px solid #4bc0c0 !important;
+  position: relative;
+  box-shadow: 0 0 8px rgba(75, 192, 192, 0.6);
+  transform: scale(1.05);
+  z-index: 15;
+}
+</style>
+<style>
+/* Weekend column and cell highlight */
+.sticky-header-row .date-column.weekend {
+  background: #8dbee3 !important;
+  color: #090809 !important;
+}
+
+.calendar-cell.weekend {
+  background: #adabab !important;
+  color: #212529 !important;
+}
+
+/* Additional weekend styling for the sticky layout */
+.date-column.weekend {
+  background: #8dbee3 !important;
+  color: #090809 !important;
+}
+</style>
+
+<script>
+// Wave Loading Animation Variables
+let waveProgress = 0;
+let wavePhase = 0;
+let waveAnimationInterval = null;
+
+// Wave Loading Functions
+function showWaveLoader() {
+  $('#waveLoadingOverlay').removeClass('hide').addClass('show');
+  $('#mainContent').hide();
+  initializeWave();
+  startWaveAnimation();
+  startWaveProgress();
+}
+
+function hideWaveLoader() {
+  $('#waveLoadingOverlay').removeClass('show').addClass('hide');
+  setTimeout(() => {
+    $('#waveLoadingOverlay').hide();
+    $('#mainContent').fadeIn(300);
+  }, 200);
+}
+
+function startWaveAnimation() {
+  // Animate wave movement - medium speed animation
+  setInterval(() => {
+    wavePhase += 0.08; // Medium speed wave movement
+    initializeWave();
+    updateProgressWave(waveProgress);
+  }, 40); // Medium animation refresh rate
+}
+
+function startWaveProgress() {
+  waveAnimationInterval = setInterval(() => {
+    // Medium loading progression
+    if (waveProgress < 40) {
+      waveProgress += Math.random() * 8 + 6; // Medium initial loading (2-6% per tick)
+    } else if (waveProgress < 80) {
+      waveProgress += Math.random() * 6 + 4; // Medium speed (2-5% per tick)
+    } else if (waveProgress < 95) {
+      waveProgress += Math.random() * 4 + 2; // Slower medium speed (1-3% per tick)
+    } else {
+      waveProgress += Math.random() * 2 + 1; // Gentle final stretch (0.5-1.5% per tick)
+    }
+    
+    if (waveProgress >= 100) {
+      waveProgress = 100;
+      clearInterval(waveAnimationInterval);
+    }
+    
+    $('#waveProgressPercent').text(Math.floor(waveProgress));
+    updateProgressWave(waveProgress);
+    
+    // Auto-hide when complete
+    if (waveProgress >= 100) {
+      setTimeout(() => {
+        hideWaveLoader();
+      }, 200); // Medium delay before hiding
+    }
+  }, 25); // Medium update interval
+}
+
+function initializeWave() {
+  const width = 400;
+  const height = 80;
+  const centerY = height / 2;
+  const amplitude = 20;
+  const frequency = 0.02;
+  
+  // Set initial progress wave (empty)
+  updateProgressWave(0);
+}
+
+function updateProgressWave(progressPercent) {
+  const width = 400;
+  const height = 80;
+  const centerY = height / 2;
+  const amplitude = 20;
+  const frequency = 0.02;
+  const progressWidth = (progressPercent / 100) * width;
+  
+  if (progressWidth <= 0) {
+    $('#progressWave').attr('d', '');
+    $('#glowWave').attr('d', '');
+    return;
+  }
+  
+  // Generate progress wave path with smooth animation
+  let progressPath = `M 0 ${centerY}`;
+  let glowPath = `M 0 ${centerY}`;
+  
+  for (let x = 0; x <= Math.min(progressWidth, width); x += 1) {
+    const y = centerY + amplitude * Math.sin(frequency * x + wavePhase);
+    progressPath += ` L ${x} ${y}`;
+    glowPath += ` L ${x} ${y}`;
+  }
+  
+  $('#progressWave').attr('d', progressPath);
+  $('#glowWave').attr('d', glowPath);
+}
+
+// Enable Bootstrap tooltips
+$(function () {
+  $('[data-toggle="tooltip"]').tooltip({ container: 'body' });
+});
+
+// Global variables
+let draggedElement = null;
+let draggedData = null;
+let isDragModeEnabled = false;
+let isDragFillEnabled = false;
+let dragFillStart = null;
+let dragFillSelection = [];
+let availableProjects = [];
+
+$(document).ready(function() {
+  // Show wave loader immediately before any content appears
+  showWaveLoader();
+  
+  // Load available projects
+  loadProjects();
+  
+  // Initialize sticky calendar scroll synchronization
+  initializeStickyCalendarScrolling();
+  
+  // Date range validation for manager calendar view
+  function validateDateRange() {
+    const startMonth = $('#startMonth').val();
+    const endMonth = $('#endMonth').val();
+
+    if (startMonth && endMonth) {
+      const start = new Date(startMonth + '-01');
+      const end = new Date(endMonth + '-01');
+
+      if (end <= start) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  // Real-time validation on date input changes
+  $('#startMonth').on('change', function() {
+    if (!validateDateRange()) {
+      alert('End month must be after start month');
+      $(this).focus();
+    }
+  });
+
+  $('#endMonth').on('change', function() {
+    if (!validateDateRange()) {
+      alert('End month must be after start month');
+      $(this).focus();
+    }
+  });
+
+  // Form submission validation
+  $('#dateRangeForm').on('submit', function(e) {
+    if (!validateDateRange()) {
+      e.preventDefault();
+      alert('End month must be after start month');
+      return false;
+    }
+  });
+  
+  // Cell click handler for assignment
+  $(document).on('click', '.clickable-cell', function(e) {
+    if (isDragModeEnabled || isDragFillEnabled) return;
+    
+    const empCode = $(this).data('emp-code');
+    const empName = $(this).data('emp-name');
+    const date = $(this).data('date');
+    const totalHours = parseFloat($(this).data('total-hours')) || 0;
+    
+    openAssignmentModal(empCode, empName, date, totalHours);
+  });
+
+  // Save assignment
+  $('#saveAssignment').click(function() {
+    saveAssignment();
+  });
+
+  // Update assignment
+  $('#updateAssignment').click(function() {
+    updateAssignmentModal();
+  });
+
+  // Delete assignment
+  $('#deleteAssignment').click(function() {
+    deleteAssignmentModal();
+  });
+
+  // Toggle drag mode
+  $('#toggleDragMode').click(function() {
+    isDragModeEnabled = !isDragModeEnabled;
+  if (isDragModeEnabled) {
+  isDragFillEnabled = false;
+  $('#toggleDragFill').html('<i class="fas fa-fill"></i> Enable Drag Fill').removeClass('btn-warning').addClass('btn-outline-secondary');
+  $('body').removeClass('drag-fill-mode');
+      
+      $(this).html('<i class="fas fa-lock"></i> Disable Drag Mode').removeClass('btn-info').addClass('btn-warning');
+      $('.draggable-block').attr('draggable', 'true').css('cursor', 'grab');
+      showToast('Drag mode enabled! You can now drag tasks between employees and dates.', 'success');
+    } else {
+      $(this).html('<i class="fas fa-arrows-alt"></i> Enable Drag Mode').removeClass('btn-warning').addClass('btn-info');
+      $('.draggable-block').attr('draggable', 'false').css('cursor', 'default');
+      showToast('Drag mode disabled.', 'info');
+    }
+  });
+
+  // Toggle drag fill mode
+  $('#toggleDragFill').click(function() {
+    isDragFillEnabled = !isDragFillEnabled;
+  if (isDragFillEnabled) {
+      isDragModeEnabled = false;
+      $('#toggleDragMode').html('<i class="fas fa-arrows-alt"></i> Enable Drag Mode').removeClass('btn-warning').addClass('btn-info');
+      $('.draggable-block').attr('draggable', 'false').css('cursor', 'default');
+      
+  $(this).html('<i class="fas fa-stop-circle"></i> Disable Drag Fill').removeClass('btn-outline-secondary').addClass('btn-warning');
+      $('body').addClass('drag-fill-mode');
+      showToast('Drag-fill mode enabled! Click and drag to fill multiple cells with hours.', 'success');
+    } else {
+  $(this).html('<i class="fas fa-fill"></i> Enable Drag Fill').removeClass('btn-warning').addClass('btn-outline-secondary');
+      $('body').removeClass('drag-fill-mode');
+      clearDragFillSelection();
+      showToast('Drag-fill mode disabled.', 'info');
+    }
+  });
+
+  // Drag Fill functionality
+  let isMouseDown = false;
+  let dragFillMode = 'cell'; // 'cell', 'project', 'row'
+  let hoveredProject = null; // Track which project is being hovered
+  
+  // Track hover over project blocks to auto-select them for drag-fill
+  $(document).on('mouseenter', '.project-stack-block', function(e) {
+    if (!isDragFillEnabled) return;
+    
+    hoveredProject = $(this);
+    // Clear any previous project highlights
+    $('.project-stack-block').removeClass('drag-fill-hover-highlight');
+    // Highlight the hovered project
+    $(this).addClass('drag-fill-hover-highlight');
+  });
+  
+  $(document).on('mouseleave', '.project-stack-block', function(e) {
+    if (!isDragFillEnabled) return;
+    
+    hoveredProject = null;
+    $(this).removeClass('drag-fill-hover-highlight');
+  });
+  
+  // Enhanced drag-fill: Click on project block to drag-fill that specific project
+  $(document).on('mousedown', '.project-stack-block', function(e) {
+    if (!isDragFillEnabled) return;
+    
+    e.preventDefault();
+    e.stopPropagation();
+    isMouseDown = true;
+    dragFillMode = 'project';
+    
+    const projectBlock = $(this);
+    const cell = projectBlock.closest('.calendar-cell');
+    
+    dragFillStart = {
+      empCode: cell.data('emp-code'),
+      date: cell.data('date'),
+      element: cell[0],
+      projectData: {
+        projectId: projectBlock.data('project-id'),
+        projectName: projectBlock.data('project-name'),
+        hours: projectBlock.data('hours')
+      }
+    };
+    
+    // Highlight the selected project
+    projectBlock.addClass('drag-fill-source-project');
+    showToast(`Drag-fill: "${dragFillStart.projectData.projectName}" selected`, 'info');
+    
+    clearDragFillSelection();
+    cell.addClass('drag-fill-selection');
+    dragFillSelection = [cell[0]];
+  });
+  
+  // Cell-level drag-fill (drag all projects in cell or specific hovered project)
+  $(document).on('mousedown', '.calendar-cell', function(e) {
+    if (!isDragFillEnabled || $(e.target).hasClass('project-stack-block')) return;
+    
+    e.preventDefault();
+    isMouseDown = true;
+    
+    dragFillStart = {
+      empCode: $(this).data('emp-code'),
+      date: $(this).data('date'),
+      element: this
+    };
+    
+    // Check if we were hovering over a specific project
+    if (hoveredProject && hoveredProject.closest('.calendar-cell')[0] === this) {
+      // User was hovering over a specific project - select only that project
+      dragFillMode = 'project';
+      dragFillStart.projectData = {
+        projectId: hoveredProject.data('project-id'),
+        projectName: hoveredProject.data('project-name'),
+        hours: hoveredProject.data('hours')
+      };
+      hoveredProject.addClass('drag-fill-source-project');
+      showToast(`Drag-fill: "${dragFillStart.projectData.projectName}" selected (hover-detected)`, 'info');
+    } else {
+      // User clicked on cell area - select all projects
+      dragFillMode = 'cell';
+      
+      // Find all project blocks in this cell
+      const projectBlocks = $(this).find('.draggable-block');
+      if (projectBlocks.length > 0) {
+        if (projectBlocks.length === 1) {
+          // Only one project, use it directly
+          const projectBlock = projectBlocks.first();
+          dragFillStart.projectData = {
+            projectId: projectBlock.data('project-id'),
+            projectName: projectBlock.data('project-name'),
+            hours: projectBlock.data('hours')
+          };
+          showToast(`Drag-fill: "${dragFillStart.projectData.projectName}" selected`, 'info');
+        } else {
+          // Multiple projects - will copy all
+          dragFillStart.allProjects = [];
+          projectBlocks.each(function() {
+            const block = $(this);
+            dragFillStart.allProjects.push({
+              projectId: block.data('project-id'),
+              projectName: block.data('project-name'),
+              hours: block.data('hours')
+            });
+          });
+          showToast(`Drag-fill: ${projectBlocks.length} projects selected`, 'info');
+        }
+      } else {
+        // No projects in source cell
+        showToast('No projects in this cell. Please select a cell with existing assignments.', 'warning');
+        isMouseDown = false;
+        return;
+      }
+    }
+    
+    clearDragFillSelection();
+    $(this).addClass('drag-fill-selection');
+    dragFillSelection = [this];
+  });
+
+  // Row-level drag-fill (drag entire row)
+  $(document).on('mousedown', '.emp-cell', function(e) {
+    if (!isDragFillEnabled) return;
+    
+    e.preventDefault();
+    isMouseDown = true;
+    dragFillMode = 'row';
+    
+    const employeeRow = $(this).closest('.employee-row');
+    const empIndex = employeeRow.data('emp-index');
+    const calendarRow = $(`.employee-calendar-row[data-emp-index="${empIndex}"]`);
+    const empCode = calendarRow.find('.calendar-cell').first().data('emp-code');
+    
+    dragFillStart = {
+      empCode: empCode,
+      mode: 'row',
+      element: this,
+      sourceRow: calendarRow,
+      empIndex: empIndex
+    };
+    
+    // Collect all projects from all cells in this calendar row
+    const allRowProjects = [];
+    calendarRow.find('.calendar-cell').each(function() {
+      const cell = $(this);
+      const date = cell.data('date');
+      const projects = [];
+      
+      cell.find('.draggable-block').each(function() {
+        const block = $(this);
+        projects.push({
+          projectId: block.data('project-id'),
+          projectName: block.data('project-name'),
+          hours: block.data('hours'),
+          date: date
+        });
+      });
+      
+      if (projects.length > 0) {
+        allRowProjects.push({
+          date: date,
+          projects: projects
+        });
+      }
+    });
+    
+    if (allRowProjects.length === 0) {
+      showToast('No projects found in this row.', 'warning');
+      isMouseDown = false;
+      return;
+    }
+    
+    dragFillStart.rowProjects = allRowProjects;
+    showToast(`Row drag-fill: ${allRowProjects.length} dates with projects selected`, 'info');
+    
+    clearDragFillSelection();
+    employeeRow.addClass('drag-fill-source-row');
+    calendarRow.addClass('drag-fill-source-row');
+    dragFillSelection = [this];
+  });
+
+  $(document).on('mouseenter', '.calendar-cell', function(e) {
+    if (!isDragFillEnabled || !isMouseDown || !dragFillStart) return;
+    
+    // Handle row drag-fill mode
+    if (dragFillMode === 'row') {
+      const targetCalendarRow = $(this).closest('.employee-calendar-row');
+      const targetEmpIndex = targetCalendarRow.data('emp-index');
+      const targetEmpCode = $(this).data('emp-code');
+      
+      if (targetEmpCode !== dragFillStart.empCode && targetEmpIndex !== dragFillStart.empIndex) {
+        // Clear previous preview
+        $('.drag-fill-preview, .drag-fill-preview-row').removeClass('drag-fill-preview drag-fill-preview-row');
+        
+        // Highlight entire target row (both employee and calendar parts)
+        const targetEmployeeRow = $(`.employee-row[data-emp-index="${targetEmpIndex}"]`);
+        targetEmployeeRow.addClass('drag-fill-preview-row');
+        targetCalendarRow.addClass('drag-fill-preview-row');
+        
+        // Add all cells in target row to selection
+        clearDragFillSelection();
+        $('.drag-fill-source-row').addClass('drag-fill-selection');
+        targetCalendarRow.find('.calendar-cell').each(function() {
+          if (!dragFillSelection.includes(this)) {
+            dragFillSelection.push(this);
+          }
+        });
+      }
+      return;
+    }
+    
+    // Handle cell and project drag-fill modes
+    // Clear previous preview
+    $('.drag-fill-preview').removeClass('drag-fill-preview');
+    
+    // Add to selection if not already included
+    if (!$(this).hasClass('drag-fill-selection')) {
+      $(this).addClass('drag-fill-preview');
+      
+      // Update selection array based on drag mode
+      if (dragFillMode === 'project' || dragFillMode === 'cell') {
+        const startCalendarRow = $(dragFillStart.element).closest('.employee-calendar-row');
+        const currentCalendarRow = $(this).closest('.employee-calendar-row');
+        const startRowIndex = startCalendarRow.index();
+        const currentRowIndex = currentCalendarRow.index();
+        const startCol = $(dragFillStart.element).index();
+        const currentCol = $(this).index();
+        
+        // Calculate rectangular selection
+        const minRow = Math.min(startRowIndex, currentRowIndex);
+        const maxRow = Math.max(startRowIndex, currentRowIndex);
+        const minCol = Math.min(startCol, currentCol);
+        const maxCol = Math.max(startCol, currentCol);
+        
+        // Clear and rebuild selection
+        clearDragFillSelection();
+        $(dragFillStart.element).addClass('drag-fill-selection');
+        
+        let cellCount = 0;
+        for (let row = minRow; row <= maxRow; row++) {
+          const calendarRow = $('.employee-calendar-row').eq(row);
+          for (let col = minCol; col <= maxCol; col++) {
+            const cell = calendarRow.find('.calendar-cell').eq(col);
+            if (cell.length > 0) {
+               const cellDate = cell.data('date');
+              if (cellDate) {
+                const jsDate = new Date(cellDate);
+                const dayOfWeek = jsDate.getDay(); // 0=Sunday, 6=Saturday
+                if (dayOfWeek === 0 || dayOfWeek === 6) {
+                  continue; // Skip Saturday and Sunday
+                }
+              }
+              cell.addClass('drag-fill-preview');
+              if (!dragFillSelection.includes(cell[0])) {
+                dragFillSelection.push(cell[0]);
+              }
+              cellCount++;
+            }
+          }
+        }
+        
+        // Update UI to show selection count
+        if (dragFillStart.projectData && cellCount > 1) {
+          const tooltip = `Drag-filling "${dragFillStart.projectData.projectName}" to ${cellCount} cells`;
+          $(this).attr('title', tooltip);
+        } else if (dragFillStart.allProjects && cellCount > 1) {
+          const tooltip = `Drag-filling ${dragFillStart.allProjects.length} projects to ${cellCount} cells`;
+          $(this).attr('title', tooltip);
+        }
+      }
+    }
+  });
+
+  $(document).on('mouseup', function(e) {
+    if (!isDragFillEnabled || !isMouseDown || !dragFillStart) return;
+    
+    isMouseDown = false;
+    
+    if (dragFillMode === 'row') {
+      // Handle row drag-fill
+      if (dragFillSelection.length > 1 && dragFillStart.rowProjects) {
+        const targetRows = $('.drag-fill-preview-row');
+        if (targetRows.length > 0) {
+          const confirmMessage = `Copy all projects from ${dragFillStart.empCode} to ${targetRows.length} employee(s)?`;
+          if (confirm(confirmMessage)) {
+            performRowDragFill(dragFillStart, targetRows);
+          }
+        }
+      }
+    } else if (dragFillSelection.length > 1) {
+      // Handle cell/project drag-fill
+      if (dragFillStart.projectData) {
+        // Single project drag-fill - automatically copy entire source cell content
+        performCellReplaceDragFill(dragFillStart, dragFillSelection);
+      } else if (dragFillStart.allProjects) {
+        // Multiple projects drag-fill - automatically copy entire source cell content
+        performCellReplaceDragFill(dragFillStart, dragFillSelection);
+      }
+    } else if (dragFillSelection.length > 1 && !dragFillStart.projectData && !dragFillStart.allProjects) {
+      showToast('No project found in source cell. Please start drag-fill from a cell with existing assignments.', 'warning');
+    }
+    
+    clearDragFillSelection();
+    $('.drag-fill-source-project').removeClass('drag-fill-source-project');
+    $('.drag-fill-source-row').removeClass('drag-fill-source-row');
+    $('.drag-fill-preview-row').removeClass('drag-fill-preview-row');
+    $('.drag-fill-hover-highlight').removeClass('drag-fill-hover-highlight');
+    hoveredProject = null;
+    dragFillStart = null;
+    dragFillMode = 'cell';
+  });
+
+  // Regular drag and drop for individual blocks
+  $(document).on('dragstart', '.draggable-block', function(e) {
+    if (!isDragModeEnabled) {
+      e.preventDefault();
+      return false;
+    }
+    
+    draggedElement = this;
+    draggedData = {
+      projectId: $(this).data('project-id'),
+      assignmentId: $(this).data('assignment-id'),
+      empCode: $(this).data('emp-code'),
+      date: $(this).data('date'),
+      hours: $(this).data('hours'),
+      projectName: $(this).data('project-name')
+    };
+    
+    $(this).addClass('dragging');
+    
+    // Set drag effect
+    e.originalEvent.dataTransfer.effectAllowed = 'move';
+    e.originalEvent.dataTransfer.setData('text/html', '');
+  });
+
+  $(document).on('dragend', '.draggable-block', function(e) {
+    $(this).removeClass('dragging');
+    $('.drop-zone').removeClass('drag-over drag-over-invalid');
+  });
+
+  // Make calendar cells drop zones
+  $('.drop-zone').on('dragover', function(e) {
+    if (!isDragModeEnabled) return;
+    e.preventDefault();
+    
+    // Check if dropping here would exceed 8-hour limit
+    if (draggedData) {
+      const targetTotalHours = parseFloat($(this).data('total-hours')) || 0;
+      const draggedHours = parseFloat(draggedData.hours) || 0;
+      const newTotalHours = targetTotalHours + draggedHours;
+      
+      if (newTotalHours > 8) {
+        e.originalEvent.dataTransfer.dropEffect = 'none';
+        $(this).addClass('drag-over-invalid');
+        $(this).removeClass('drag-over');
+        return;
+      } else {
+        e.originalEvent.dataTransfer.dropEffect = 'move';
+        $(this).addClass('drag-over');
+        $(this).removeClass('drag-over-invalid');
+      }
+    } else {
+      e.originalEvent.dataTransfer.dropEffect = 'move';
+      $(this).addClass('drag-over');
+    }
+  });
+
+  $('.drop-zone').on('dragleave', function(e) {
+    if (!isDragModeEnabled) return;
+    // Only remove highlight if we're actually leaving the drop zone
+    if (!$.contains(this, e.relatedTarget)) {
+      $(this).removeClass('drag-over drag-over-invalid');
+    }
+  });
+
+  $('.drop-zone').on('drop', function(e) {
+    if (!isDragModeEnabled) return;
+    e.preventDefault();
+    $(this).removeClass('drag-over drag-over-invalid');
+    
+    if (!draggedElement || !draggedData) return;
+    
+    const targetEmpCode = $(this).data('emp-code');
+    const targetDate = $(this).data('date');
+    
+    // Don't allow drop on same cell
+    if (draggedData.empCode === targetEmpCode && draggedData.date === targetDate) {
+      showToast('Cannot move task to the same location!', 'warning');
+      return;
+    }
+    
+    // Check if adding this task would exceed 8 hours for target employee
+    const targetTotalHours = parseFloat($(this).data('total-hours')) || 0;
+    const draggedHours = parseFloat(draggedData.hours) || 0;
+    const newTotalHours = targetTotalHours + draggedHours;
+    
+    if (newTotalHours > 8) {
+      const availableHours = 8 - targetTotalHours;
+      showToast(`Cannot move task! This would exceed the 8-hour daily limit for ${targetEmpCode} on ${targetDate}. Available hours: ${availableHours}`, 'error');
+      return;
+    }
+    
+    // Show confirmation dialog
+    const confirmMessage = `Move "${draggedData.projectName}" (${draggedData.hours}h) from ${draggedData.empCode} (${draggedData.date}) to ${targetEmpCode} (${targetDate})?`;
+    
+    if (confirm(confirmMessage)) {
+      // Call server endpoint to update assignment
+      updateAssignment(draggedData, targetEmpCode, targetDate);
+    }
+  });
+
+  // Initially disable both modes
+  $('.draggable-block').attr('draggable', 'false').css('cursor', 'default');
+  
+  // Add real-time validation for hours input in edit modal
+  $('#editHoursInput').on('input', function() {
+    const hours = parseFloat($(this).val()) || 0;
+    const empCode = $('#editEmpCode').val();
+    const date = $('#editDate').val();
+    const currentCell = $(`.calendar-cell[data-emp-code="${empCode}"][data-date="${date}"]`);
+    const cellTotalHours = parseFloat(currentCell.data('total-hours')) || 0;
+    const currentAssignmentHours = parseFloat($(this).attr('data-original-hours')) || 0;
+    const remainingHours = 8 - cellTotalHours + currentAssignmentHours;
+    
+    const remainingDisplay = $('#editRemainingHours');
+    if (hours > remainingHours) {
+      remainingDisplay.html(`<span class="text-danger">Exceeds available hours! Only ${remainingHours} hours available.</span>`);
+      $('#updateAssignment').prop('disabled', true);
+    } else if (hours <= 0) {
+      remainingDisplay.html(`<span class="text-warning">Hours must be greater than 0</span>`);
+      $('#updateAssignment').prop('disabled', true);
+    } else {
+      remainingDisplay.html(`<span class="text-success">Valid. ${remainingHours - hours} hours will remain available.</span>`);
+      $('#updateAssignment').prop('disabled', false);
+    }
+  });
+});
+
+// Initialize sticky calendar scrolling synchronization
+function initializeStickyCalendarScrolling() {
+  const $headerRow = $('.sticky-header-row');
+  const $calendarContent = $('.calendar-content');
+  const $firstColumn = $('.sticky-first-column');
+  
+  // Synchronize horizontal scrolling between header and content
+  $calendarContent.on('scroll', function() {
+    const scrollLeft = $(this).scrollLeft();
+    const scrollTop = $(this).scrollTop();
+    
+    // Sync horizontal scroll with header
+    $headerRow.scrollLeft(scrollLeft);
+    
+    // Sync vertical scroll with first column
+    $firstColumn.scrollTop(scrollTop);
+  });
+  
+  // Handle header scrolling (when user scrolls header directly)
+  $headerRow.on('scroll', function() {
+    const scrollLeft = $(this).scrollLeft();
+    $calendarContent.scrollLeft(scrollLeft);
+  });
+  
+  // Handle first column scrolling (when user scrolls sidebar directly)
+  $firstColumn.on('scroll', function() {
+    const scrollTop = $(this).scrollTop();
+    $calendarContent.scrollTop(scrollTop);
+  });
+  
+  // Optimize scrolling performance with requestAnimationFrame
+  let ticking = false;
+  
+  function updateScrollPositions() {
+    const scrollLeft = $calendarContent.scrollLeft();
+    const scrollTop = $calendarContent.scrollTop();
+    
+    $headerRow.scrollLeft(scrollLeft);
+    $firstColumn.scrollTop(scrollTop);
+    
+    ticking = false;
+  }
+  
+  $calendarContent.on('scroll', function() {
+    if (!ticking) {
+      requestAnimationFrame(updateScrollPositions);
+      ticking = true;
+    }
+  });
+  
+  // Handle touch scrolling for mobile devices
+  let isTouch = false;
+  
+  $calendarContent.on('touchstart', function() {
+    isTouch = true;
+  });
+  
+  $calendarContent.on('touchend', function() {
+    setTimeout(() => { isTouch = false; }, 300);
+  });
+  
+  // Smooth scrolling behavior for better UX
+  $calendarContent.css({
+    'scroll-behavior': 'smooth',
+    '-webkit-overflow-scrolling': 'touch'
+  });
+  
+  // Ensure proper initial positioning
+  setTimeout(() => {
+    $headerRow.scrollLeft(0);
+    $firstColumn.scrollTop(0);
+    $calendarContent.scrollLeft(0);
+    $calendarContent.scrollTop(0);
+  }, 100);
+}
+
+// Load available projects from server
+function loadProjects() {
+  console.log('Loading projects for manager calendar...');
+  $.get('/api/projects', function(data) {
+    console.log('Projects loaded successfully:', data);
+    availableProjects = data;
+    const projectSelect = $('#projectSelect');
+    projectSelect.empty().append('<option value="">Select a project...</option>');
+    
+  data.forEach(function(project) {
+      // Compose a detailed briefing for each project using ProjectMaster schema fields
+     const briefing = `${project.projectName}`;
+      projectSelect.append(`<option value="${project._id}">${briefing}</option>`);
+    });
+  }).fail(function() {
+    showToast('Failed to load projects', 'error');
+  });
+}
+// Open assignment modal
+function openAssignmentModal(empCode, empName, date, totalHours) {
+  if (totalHours >= 8) {
+    showToast('Cannot add assignment: 8 hours already assigned for this day.', 'error');
+    return;
+  }
+  $('#modalEmpCode').val(empCode);
+  $('#modalEmployeeName').val(empName);
+  $('#modalDate').val(date);
+  $('#modalDateDisplay').val(date);
+  // Calculate remaining hours
+  const remainingHours = 8 - totalHours;
+  $('#remainingHours').text(`Remaining hours: ${remainingHours}`);
+  $('#hoursInput').attr('max', remainingHours).val('');
+  // Load current assignments for this employee and date
+  loadCurrentAssignments(empCode, date);
+  // Reset form
+  $('#projectSelect').val('');
+  $('#hoursInput').val('');
+  // Disable save button if no hours left
+  if (remainingHours <= 0) {
+    $('#saveAssignment').prop('disabled', true);
+  } else {
+    $('#saveAssignment').prop('disabled', false);
+  }
+  $('#assignmentModal').modal('show');
+}
+
+// Load current assignments for display
+function loadCurrentAssignments(empCode, date) {
+  console.log(`Loading assignments for ${empCode} on ${date}...`);
+  $.get(`/api/assignments/${empCode}/${date}`, function(assignments) {
+    console.log('Assignments loaded:', assignments);
+    const assignmentsList = $('#assignmentsList');
+    const existingDiv = $('#existingAssignments');
+    
+    if (assignments.length > 0) {
+      assignmentsList.empty();
+      assignments.forEach(function(assignment) {
+        assignmentsList.append(`
+          <div class="d-flex justify-content-between align-items-center mb-1">
+            <span><strong>${assignment.projectName}</strong></span>
+            <span class="badge bg-primary">${assignment.hours}h</span>
+          </div>
+        `);
+      });
+      existingDiv.show();
+    } else {
+      existingDiv.hide();
+    }
+  }).fail(function(xhr, status, error) {
+    console.error('Failed to load assignments:', xhr.responseText, status, error);
+    showToast('Failed to load current assignments: ' + (xhr.responseJSON?.message || error), 'error');
+  });
+}
+
+// Save new assignment
+function saveAssignment() {
+  const empCode = $('#modalEmpCode').val();
+  const date = $('#modalDate').val();
+  const projectId = $('#projectSelect').val();
+  const hours = parseFloat($('#hoursInput').val());
+  
+  console.log('Saving assignment:', { empCode, date, projectId, hours });
+  
+  if (!projectId || !hours) {
+    showToast('Please select a project and enter hours', 'error');
+    return;
+  }
+  
+  if (hours <= 0 || hours > 8) {
+    showToast('Hours must be between 0.5 and 8', 'error');
+    return;
+  }
+  
+  showLoading(true);
+  
+  $.ajax({
+    url: '/api/assignments',
+    method: 'POST',
+    contentType: 'application/json',
+    data: JSON.stringify({
+      empCode: empCode,
+      date: date,
+      projectId: projectId,
+      hours: hours
+    }),
+    success: function(response) {
+      console.log('Assignment save response:', response);
+      showLoading(false);
+      if (response.success) {
+        showToast(response.message || 'Assignment created successfully!', 'success');
+        $('#assignmentModal').modal('hide');
+        setTimeout(() => {
+          window.location.reload();
+        }, 1500);
+      } else {
+        showToast('Error: ' + (response.message || 'Unknown error'), 'error');
+      }
+    },
+    error: function(xhr, status, error) {
+      console.error('Assignment save error:', xhr.responseText, status, error);
+      showLoading(false);
+      const errorMsg = xhr.responseJSON?.message || xhr.responseText || error;
+      showToast('Error creating assignment: ' + errorMsg, 'error');
+    }
+  });
+}
+
+// Edit assignment function
+function editAssignment(element) {
+  const projectId = $(element).data('project-id');
+  const assignmentId = $(element).data('assignment-id');
+  const empCode = $(element).data('emp-code');
+  const date = $(element).data('date');
+  const hours = $(element).data('hours');
+  const projectName = $(element).data('project-name');
+  
+  console.log('🔍 Edit assignment debug info:');
+  console.log('Assignment ID from data:', assignmentId, '(type:', typeof assignmentId, ', length:', assignmentId?.length, ')');
+  console.log('Element data attributes (raw):', {
+    'data-project-id': $(element).attr('data-project-id'),
+    'data-assignment-id': $(element).attr('data-assignment-id'),
+    'data-emp-code': $(element).attr('data-emp-code'),
+    'data-date': $(element).attr('data-date'),
+    'data-hours': $(element).attr('data-hours'),
+    'data-project-name': $(element).attr('data-project-name')
+  });
+  console.log('Parsed data:', {
+    projectId, assignmentId, empCode, date, hours, projectName
+  });
+  console.log('Element HTML:', $(element)[0].outerHTML.substring(0, 200) + '...');
+  
+  if (!assignmentId || assignmentId.toString().trim() === '') {
+    console.warn('⚠️ Assignment ID is missing or empty in editAssignment');
+  }
+  
+  // Find employee name from the calendar cell data
+  const empName = $(element).closest('.calendar-cell').data('emp-name');
+  
+  // Populate edit modal
+  $('#editEmpCode').val(empCode);
+  $('#editEmployeeName').val(empName);
+  $('#editDate').val(date);
+  $('#editDateDisplay').val(date);
+  $('#editAssignmentId').val(assignmentId);
+  $('#editProjectId').val(projectId);
+  $('#editProjectName').val(projectName);
+  $('#editHoursInput').val(hours);
+  $('#editHoursInput').attr('data-original-hours', hours);
+  
+  // Calculate remaining hours (excluding current assignment)
+  const cellTotalHours = parseFloat($(element).closest('.calendar-cell').data('total-hours')) || 0;
+  const currentAssignmentHours = parseFloat(hours) || 0;
+  const remainingHours = 8 - cellTotalHours + currentAssignmentHours;
+  $('#editRemainingHours').text(`Remaining hours: ${remainingHours}`);
+  // Set max to 8 for editing (the validation will handle the remaining hours check)
+  $('#editHoursInput').attr('max', 8);
+  
+  // Reset the update button state
+  $('#updateAssignment').prop('disabled', false);
+  
+  $('#editModal').modal('show');
+}
+
+// Update assignment
+function updateAssignmentModal() {
+  const assignmentId = $('#editAssignmentId').val();
+  const hours = parseFloat($('#editHoursInput').val());
+  const empCode = $('#editEmpCode').val();
+  const date = $('#editDate').val();
+  
+  console.log('Updating assignment:', { assignmentId, hours, empCode, date });
+  console.log('Assignment ID value:', assignmentId, 'Type:', typeof assignmentId, 'Length:', assignmentId?.length);
+  
+  if (!assignmentId || assignmentId.trim() === '') {
+    console.error('Assignment ID is missing or empty');
+    showToast('Error: Assignment ID is missing. Please try reloading the page.', 'error');
+    return;
+  }
+  
+  if (!hours || hours <= 0 || hours > 8) {
+    showToast('Hours must be between 0.5 and 8', 'error');
+    return;
+  }
+  
+  // Get current cell data to validate remaining hours
+  const currentCell = $(`.calendar-cell[data-emp-code="${empCode}"][data-date="${date}"]`);
+  const cellTotalHours = parseFloat(currentCell.data('total-hours')) || 0;
+  const currentAssignmentHours = parseFloat($('#editHoursInput').attr('data-original-hours')) || 0;
+  const remainingHours = 8 - cellTotalHours + currentAssignmentHours;
+  
+  if (hours > remainingHours) {
+    showToast(`Cannot assign ${hours} hours. Only ${remainingHours} hours available.`, 'error');
+    return;
+  }
+  
+  showLoading(true);
+  
+  $.ajax({
+    url: `/api/assignments/${assignmentId}`,
+    method: 'PUT',
+    contentType: 'application/json',
+    data: JSON.stringify({
+      hours: hours,
+      date: date // Send date to backend
+    }),
+    success: function(response) {
+      console.log('Assignment update response:', response);
+      showLoading(false);
+      if (response.success) {
+        showToast(response.message || 'Assignment updated successfully!', 'success');
+        $('#editModal').modal('hide');
+        setTimeout(() => {
+          window.location.reload();
+        }, 1500);
+      } else {
+        showToast('Error: ' + (response.message || 'Unknown error'), 'error');
+      }
+    },
+    error: function(xhr, status, error) {
+      console.error('Assignment update error:', xhr.responseText, status, error);
+      showLoading(false);
+      const errorMsg = xhr.responseJSON?.message || xhr.responseText || error;
+      showToast('Error updating assignment: ' + errorMsg, 'error');
+    }
+  });
+}
+
+// Delete assignment
+function deleteAssignmentModal() {
+  if (!confirm('Are you sure you want to delete this assignment?')) {
+    return;
+  }
+  
+  const assignmentId = $('#editAssignmentId').val();
+  const empCode = $('#editEmpCode').val();
+  const date = $('#editDate').val();
+  
+  console.log('🔍 Delete assignment debug info:');
+  console.log('Assignment ID:', assignmentId, '(type:', typeof assignmentId, ', length:', assignmentId?.length, ')');
+  console.log('Employee Code:', empCode);
+  console.log('Date:', date);
+  console.log('All form values:', {
+    assignmentId: $('#editAssignmentId').val(),
+    empCode: $('#editEmpCode').val(),
+    date: $('#editDate').val(),
+    projectId: $('#editProjectId').val(),
+    projectName: $('#editProjectName').val()
+  });
+  
+  if (!assignmentId || assignmentId.trim() === '') {
+    console.error('❌ Assignment ID is missing or empty - cannot delete');
+    showToast('Error: Assignment ID is missing. Please try again.', 'error');
+    return;
+  }
+  
+  showLoading(true);
+  
+  $.ajax({
+    url: `/api/assignments/${assignmentId}`,
+    method: 'DELETE',
+    contentType: 'application/json',
+    data: JSON.stringify({
+      empCode: empCode,
+      date: date
+    }),
+    success: function(response) {
+      showLoading(false);
+      if (response.success) {
+        showToast(response.message || 'Assignment deleted successfully!', 'success');
+        $('#editModal').modal('hide');
+        setTimeout(() => {
+          window.location.reload();
+        }, 1500);
+      } else {
+        showToast('Error: ' + (response.message || 'Unknown error'), 'error');
+      }
+    },
+    error: function(xhr, status, error) {
+      console.error('Assignment delete error:', xhr.responseText, status, error);
+      showLoading(false);
+      const errorMsg = xhr.responseJSON?.message || xhr.responseText || error;
+      showToast('Error deleting assignment: ' + errorMsg, 'error');
+    }
+  });
+}
+
+function clearDragFillSelection() {
+  $('.drag-fill-selection, .drag-fill-preview, .drag-fill-preview-row, .drag-fill-source-project, .drag-fill-source-row, .drag-fill-hover-highlight').removeClass('drag-fill-selection drag-fill-preview drag-fill-preview-row drag-fill-source-project drag-fill-source-row drag-fill-hover-highlight');
+  dragFillSelection = [];
+}
+
+// Single project drag-fill
+function performDragFill(startData, selectedCells, hours) {
+  if (!startData.projectData) {
+    showToast('No source project found for drag-fill operation', 'error');
+    return;
+  }
+  
+  // Validate 8-hour limit for each target cell
+  const invalidCells = [];
+  const targetCells = selectedCells.map(cell => {
+    const $cell = $(cell);
+    const empCode = $cell.data('emp-code');
+    const date = $cell.data('date');
+    const currentTotalHours = parseFloat($cell.data('total-hours')) || 0;
+    
+    // Skip source cell
+    if (empCode === startData.empCode && date === startData.date) {
+      return null;
+    }
+    
+    // Check if adding hours would exceed 8-hour limit
+    if (currentTotalHours + hours > 8) {
+      const availableHours = 8 - currentTotalHours;
+      invalidCells.push(`${empCode} (${date}) - Available: ${availableHours}h`);
+      return null;
+    }
+    
+    return { empCode, date };
+  }).filter(cell => cell !== null);
+  
+  if (invalidCells.length > 0) {
+    showToast(`Cannot perform drag-fill! The following cells would exceed 8-hour limit:\n${invalidCells.join('\n')}`, 'error');
+    return;
+  }
+  
+  if (targetCells.length === 0) {
+    showToast('No valid target cells selected', 'warning');
+    return;
+  }
+  
+  showLoading(true);
+  
+  $.ajax({
+    url: '/api/drag-fill',
+    method: 'POST',
+    contentType: 'application/json',
+    data: JSON.stringify({
+      sourceEmpCode: startData.empCode,
+      sourceDate: startData.date,
+      projectId: startData.projectData.projectId,
+      targetCells: targetCells,
+      hours: hours,
+      projectName: startData.projectData.projectName
+    }),
+    success: function(response) {
+      showLoading(false);
+      if (response.success) {
+        showToast(response.message || `Successfully filled ${targetCells.length} cells with ${hours}h of "${startData.projectData.projectName}"`, 'success');
+        setTimeout(() => {
+          window.location.reload();
+        }, 1500);
+      } else {
+        showToast('Error: ' + (response.message || 'Unknown error'), 'error');
+      }
+    },
+    error: function(xhr, status, error) {
+      showLoading(false);
+      console.error('Error in drag-fill:', error);
+      showToast('Error performing drag-fill. Please try again.', 'error');
+    }
+  });
+}
+
+// Multiple projects drag-fill
+function performMultiProjectDragFill(startData, selectedCells) {
+  if (!startData.allProjects || startData.allProjects.length === 0) {
+    showToast('No projects found for drag-fill operation', 'error');
+    return;
+  }
+  
+  // Calculate total hours from all projects being copied
+  const totalProjectHours = startData.allProjects.reduce((sum, project) => sum + (parseFloat(project.hours) || 0), 0);
+  
+  // Validate 8-hour limit for each target cell
+  const invalidCells = [];
+  const targetCells = selectedCells.map(cell => {
+    const $cell = $(cell);
+    const empCode = $cell.data('emp-code');
+    const date = $cell.data('date');
+    const currentTotalHours = parseFloat($cell.data('total-hours')) || 0;
+    
+    // Skip source cell
+    if (empCode === startData.empCode && date === startData.date) {
+      return null;
+    }
+    
+    // Check if adding all project hours would exceed 8-hour limit
+    if (currentTotalHours + totalProjectHours > 8) {
+      const availableHours = 8 - currentTotalHours;
+      invalidCells.push(`${empCode} (${date}) - Available: ${availableHours}h, Required: ${totalProjectHours}h`);
+      return null;
+    }
+    
+    return { empCode, date };
+  }).filter(cell => cell !== null);
+  
+  if (invalidCells.length > 0) {
+    showToast(`Cannot perform multi-project drag-fill! The following cells would exceed 8-hour limit:\n${invalidCells.join('\n')}`, 'error');
+    return;
+  }
+  
+  if (targetCells.length === 0) {
+    showToast('No valid target cells selected', 'warning');
+    return;
+  }
+  
+  showLoading(true);
+  
+  $.ajax({
+    url: '/api/multi-project-drag-fill',
+    method: 'POST',
+    contentType: 'application/json',
+    data: JSON.stringify({
+      sourceEmpCode: startData.empCode,
+      sourceDate: startData.date,
+      projects: startData.allProjects,
+      targetCells: targetCells
+    }),
+    success: function(response) {
+      showLoading(false);
+      if (response.success) {
+        showToast(response.message || `Successfully filled ${targetCells.length} cells with ${startData.allProjects.length} projects`, 'success');
+        setTimeout(() => {
+          window.location.reload();
+        }, 1500);
+      } else {
+        showToast('Error: ' + (response.message || 'Unknown error'), 'error');
+      }
+    },
+    error: function(xhr, status, error) {
+      showLoading(false);
+      console.error('Error in multi-project drag-fill:', error);
+      showToast('Error performing multi-project drag-fill. Please try again.', 'error');
+    }
+  });
+}
+
+// Row drag-fill
+function performRowDragFill(startData, targetRows) {
+  if (!startData.rowProjects || startData.rowProjects.length === 0) {
+    showToast('No projects found in source row', 'error');
+    return;
+  }
+  
+  // Validate 8-hour limit for each target employee and date combination
+  const invalidCells = [];
+  const targetEmployees = [];
+  
+  targetRows.each(function() {
+    const $row = $(this);
+    const empCode = $row.find('.calendar-cell').first().data('emp-code');
+    
+    if (empCode && empCode !== startData.empCode) {
+      targetEmployees.push(empCode);
+      
+      // Check each date in the source row projects against this target employee
+      startData.rowProjects.forEach(dateProject => {
+        const targetCell = $row.find(`.calendar-cell[data-date="${dateProject.date}"]`);
+        if (targetCell.length > 0) {
+          const currentTotalHours = parseFloat(targetCell.data('total-hours')) || 0;
+          const sourceProjectHours = dateProject.projects.reduce((sum, project) => sum + (parseFloat(project.hours) || 0), 0);
+          
+          if (currentTotalHours + sourceProjectHours > 8) {
+            const availableHours = 8 - currentTotalHours;
+            invalidCells.push(`${empCode} (${dateProject.date}) - Available: ${availableHours}h, Required: ${sourceProjectHours}h`);
+          }
+        }
+      });
+    }
+  });
+  
+  if (invalidCells.length > 0) {
+    showToast(`Cannot perform row drag-fill! The following cells would exceed 8-hour limit:\n${invalidCells.join('\n')}`, 'error');
+    return;
+  }
+  
+  if (targetEmployees.length === 0) {
+    showToast('No valid target employees selected', 'warning');
+    return;
+  }
+  
+  showLoading(true);
+  
+  $.ajax({
+    url: '/api/row-drag-fill',
+    method: 'POST',
+    contentType: 'application/json',
+    data: JSON.stringify({
+      sourceEmpCode: startData.empCode,
+      rowProjects: startData.rowProjects,
+      targetEmployees: targetEmployees
+    }),
+    success: function(response) {
+      showLoading(false);
+      if (response.success) {
+        showToast(response.message || `Successfully copied row data to ${targetEmployees.length} employees`, 'success');
+        setTimeout(() => {
+          window.location.reload();
+        }, 1500);
+      } else {
+        showToast('Error: ' + (response.message || 'Unknown error'), 'error');
+      }
+    },
+    error: function(xhr, status, error) {
+      showLoading(false);
+      console.error('Error in row drag-fill:', error);
+      showToast('Error performing row drag-fill. Please try again.', 'error');
+    }
+  });
+}
+
+// Cell replace drag-fill - replaces entire cell content with source cell
+function performCellReplaceDragFill(startData, selectedCells) {
+  if (!startData.empCode || !startData.date) {
+    showToast('No source cell found for drag-fill operation', 'error');
+    return;
+  }
+  
+  // Get projects from drag-fill start data (already collected during selection)
+  let sourceProjects = [];
+  
+  if (startData.projectData) {
+    // Single project was selected/hovered
+    sourceProjects = [startData.projectData];
+  } else if (startData.allProjects) {
+    // Multiple projects were selected (cell click)
+    sourceProjects = startData.allProjects;
+  } else {
+    // Fallback: get all projects from source cell via DOM
+    const sourceCell = $(`.calendar-cell[data-emp-code="${startData.empCode}"][data-date="${startData.date}"]`);
+    sourceCell.find('.draggable-block').each(function() {
+      const block = $(this);
+      sourceProjects.push({
+        projectId: block.data('project-id'),
+        projectName: block.data('project-name'),
+        hours: block.data('hours')
+      });
+    });
+  }
+  
+  if (sourceProjects.length === 0) {
+    showToast('No projects found in source cell', 'error');
+    return;
+  }
+  
+  // Calculate total hours from source cell
+  const totalSourceHours = sourceProjects.reduce((sum, project) => sum + (parseFloat(project.hours) || 0), 0);
+  
+  // Validate 8-hour limit for each target cell
+  const invalidCells = [];
+  const targetCells = selectedCells.map(cell => {
+    const $cell = $(cell);
+    const empCode = $cell.data('emp-code');
+    const date = $cell.data('date');
+    
+    // Skip source cell
+    if (empCode === startData.empCode && date === startData.date) {
+      return null;
+    }
+    
+    // Check if total source hours would exceed 8-hour limit
+    if (totalSourceHours > 8) {
+      invalidCells.push(`${empCode} (${date}) - Source has ${totalSourceHours}h which exceeds limit`);
+      return null;
+    }
+    
+    return { empCode, date };
+  }).filter(cell => cell !== null);
+  
+  if (invalidCells.length > 0) {
+    showToast(`Cannot perform cell replace! The following cells would exceed 8-hour limit:\n${invalidCells.join('\n')}`, 'error');
+    return;
+  }
+  
+  if (targetCells.length === 0) {
+    showToast('No valid target cells selected', 'warning');
+    return;
+  }
+  
+  showLoading(true);
+  
+  $.ajax({
+    url: '/api/cell-replace-drag-fill',
+    method: 'POST',
+    contentType: 'application/json',
+    data: JSON.stringify({
+      sourceEmpCode: startData.empCode,
+      sourceDate: startData.date,
+      sourceProjects: sourceProjects,
+      targetCells: targetCells
+    }),
+    success: function(response) {
+      showLoading(false);
+      if (response.success) {
+        showToast(response.message || `Successfully replaced ${targetCells.length} cells with source cell content`, 'success');
+        setTimeout(() => {
+          window.location.reload();
+        }, 1500);
+      } else {
+        showToast('Error: ' + (response.message || 'Unknown error'), 'error');
+      }
+    },
+    error: function(xhr, status, error) {
+      showLoading(false);
+      console.error('Error in cell replace drag-fill:', error);
+      showToast('Error performing cell replace drag-fill. Please try again.', 'error');
+    }
+  });
+}
+
+function updateAssignment(dragData, newEmpCode, newDate) {
+  // Show loading indicator
+  showLoading(true);
+  
+  $.ajax({
+    url: '/api/update-assignment',
+    method: 'POST',
+    contentType: 'application/json',
+    data: JSON.stringify({
+      assignmentId: dragData.assignmentId,
+      projectId: dragData.projectId,
+      oldEmpCode: dragData.empCode,
+      oldDate: dragData.date,
+      newEmpCode: newEmpCode,
+      newDate: newDate,
+      hours: dragData.hours,
+      projectName: dragData.projectName
+    }),
+    success: function(response) {
+      showLoading(false);
+      if (response.success) {
+        showToast(response.message || 'Assignment updated successfully!', 'success');
+        // Reload the page to show updated assignments after a brief delay
+        setTimeout(() => {
+          window.location.reload();
+        }, 1500);
+      } else {
+        showToast('Error: ' + (response.message || 'Unknown error'), 'error');
+      }
+    },
+    error: function(xhr, status, error) {
+      showLoading(false);
+      console.error('Error updating assignment:', error);
+      showToast('Error updating assignment. Please try again.', 'error');
+    }
+  });
+}
+
+function showToast(message, type) {
+  const toastId = type === 'error' ? 'errorToast' : 'successToast';
+  const messageId = type === 'error' ? 'errorMessage' : 'successMessage';
+  
+  $(`#${messageId}`).text(message);
+  $(`#${toastId}`).fadeIn().delay(3000).fadeOut();
+}
+
+function showLoading(show) {
+  // Use wave loading for page loading, simple overlay for actions
+  if (show) {
+    $('body').append(`
+      <div id="loading-overlay" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:9999;display:flex;justify-content:center;align-items:center;">
+        <div style="background:white;padding:20px;border-radius:8px;text-align:center;">
+          <i class="fas fa-spinner fa-spin fa-2x"></i>
+          <div style="margin-top:10px;">Processing...</div>
+        </div>
+      </div>
+    `);
+  } else {
+    $('#loading-overlay').remove();
+  }
+}
+
+// Add keyboard shortcuts
+$(document).keydown(function(e) {
+  // Escape key to cancel operations
+  if (e.keyCode === 27) {
+    if (draggedElement) {
+      $(draggedElement).removeClass('dragging');
+      $('.drop-zone').removeClass('drag-over');
+      draggedElement = null;
+      draggedData = null;
+    }
+    
+    if (isDragFillEnabled) {
+      clearDragFillSelection();
+      dragFillStart = null;
+    }
+  }
+  
+  // Ctrl+D to toggle drag mode
+  if (e.ctrlKey && e.keyCode === 68) {
+    e.preventDefault();
+    $('#toggleDragMode').click();
+  }
+  
+  // Ctrl+F to toggle drag-fill mode
+  if (e.ctrlKey && e.keyCode === 70) {
+    e.preventDefault();
+    $('#toggleDragFill').click();
+  }
+});
+
+
+// Advanced Filtering Panel Functionality
+$(document).ready(function() {
+  // Store original data for filtering
+  let originalEmployees = [];
+  let allProjects = new Set();
+  let allPractices = new Set();
+  let allPracticeManagers = new Set();
+  let activeFilters = {};
+
+  // Get employee data from server
+  const employeeData = <%- JSON.stringify(allEmployees) %>;
+
+  // Initialize data from the page
+  function initializeFilterData() {
+    // Get all employees from the page
+    $('.employee-row').each(function() {
+      const empIndex = $(this).data('emp-index');
+      const empName = $(this).find('.emp-name').text();
+      const empMeta = $(this).find('.emp-meta').text();
+      const empCode = empMeta.split(' | ')[0];
+      originalEmployees.push({
+        index: empIndex,
+        name: empName,
+        empCode: empCode,
+        element: $(this)
+      });
+    });
+
+    // Extract projects from assignments
+    $('.project-stack-block').each(function() {
+      const projectName = $(this).data('project-name');
+      if (projectName) allProjects.add(projectName);
+    });
+
+    // Extract practices and practice managers from employee data
+    if (employeeData && employeeData.length > 0) {
+      employeeData.forEach(function(emp) {
+        if (emp.homePractice) {
+          allPractices.add(emp.homePractice);
+        }
+        if (emp.practiceManager) {
+          allPracticeManagers.add(emp.practiceManager);
+        }
+      });
+    }
+
+    // Populate filter dropdowns (only practice-related, projects handled by Select2 AJAX)
+    populatePracticeFiltersFromEmployeeData();
+    loadAllProjectsFromMaster(); // Pre-load projects for better UX
+    initializeSelect2();
+  }
+
+  // Load all projects from ProjectMaster for immediate availability
+  function loadAllProjectsFromMaster() {
+    $.get('/api/projects')
+      .done(function(projects) {
+        console.log('Pre-loaded all projects from ProjectMaster:', projects);
+        // Store projects globally for fallback
+        window.allProjectsFromMaster = projects;
+      })
+      .fail(function(xhr, status, error) {
+        console.error('Failed to pre-load projects from ProjectMaster:', error);
+        window.allProjectsFromMaster = [];
+      });
+  }
+
+  // Initialize Select2 for all filter dropdowns
+  function initializeSelect2() {
+    // Initialize Employee Filter
+    $('#employeeFilter').select2({
+      theme: 'bootstrap-5',
+      placeholder: 'Search Employees...',
+      allowClear: false,
+      closeOnSelect: false,
+      width: '100%'
+    });
+
+    // Initialize Projects Filter with AJAX (fallback to pre-loaded data)
+    setTimeout(function() {
+      // Use pre-loaded data if available, otherwise use AJAX
+      function formatProjectLabel(project) {
+        return `${project.projectName} <span style='color:#888;font-size:0.9em;'>(Manager: ${project.projectManager || ''}, CBSL: ${project.cbslClient || ''}, DIH: ${project.dihClient || ''})</span>`;
+      }
+      if (window.allProjectsFromMaster && window.allProjectsFromMaster.length > 0) {
+        console.log('Using pre-loaded projects data for Select2');
+        $('#projectsFilter').select2({
+          theme: 'bootstrap-5',
+          placeholder: 'Search Projects...',
+          allowClear: false,
+          closeOnSelect: false,
+          width: '100%',
+          data: window.allProjectsFromMaster.map(function(project) {
+            return {
+              id: project.projectName,
+              text: formatProjectLabel(project)
+            };
+          }),
+          escapeMarkup: function (markup) { return markup; },
+          templateResult: function(project) {
+            return project.text;
+          },
+          templateSelection: function(project) {
+            // Only show projectName in selection for brevity
+            if (project && project.text) {
+              // Extract projectName from formatted label
+              const match = project.text.match(/^([^<]+) /);
+              return match ? match[1] : project.text;
+            }
+            return project.text;
+          }
+        });
+      } else {
+        console.log('Using AJAX for projects data');
+        $('#projectsFilter').select2({
+          theme: 'bootstrap-5',
+          placeholder: 'Search Projects...',
+          allowClear: false,
+          closeOnSelect: false,
+          width: '100%',
+          ajax: {
+            url: '/api/projects',
+            dataType: 'json',
+            delay: 250,
+            data: function (params) {
+              return {
+                search: params.term || '', // Send search term (empty for all projects)
+                page: params.page || 1
+              };
+            },
+            processResults: function (data) {
+              console.log('Projects loaded from ProjectMaster via AJAX:', data);
+              if (!data || !Array.isArray(data)) {
+                console.error('Invalid projects data received:', data);
+                return { results: [] };
+              }
+              return {
+                results: data.map(function(project) {
+                  return {
+                    id: project.projectName,
+                    text: formatProjectLabel(project)
+                  };
+                })
+              };
+            },
+            cache: true
+          },
+          minimumInputLength: 0,
+          escapeMarkup: function (markup) { return markup; },
+          templateResult: function(project) {
+            return project.text;
+          },
+          templateSelection: function(project) {
+            if (project && project.text) {
+              const match = project.text.match(/^([^<]+) /);
+              return match ? match[1] : project.text;
+            }
+            return project.text;
+          }
+        });
+      }
+    }, 500); // Give time for pre-loading to complete
+
+    // Initialize Practice Filter
+    $('#practiceFilter').select2({
+      theme: 'bootstrap-5',
+      placeholder: 'Search Practices...',
+      allowClear: false,
+      closeOnSelect: false,
+      width: '100%'
+    });
+
+    // Initialize Practice Manager Filter
+    $('#practiceManagerFilter').select2({
+      theme: 'bootstrap-5',
+      placeholder: 'Search Practice Managers...',
+      allowClear: false,
+      closeOnSelect: false,
+      width: '100%'
+    });
+
+    // Initialize Allocation Status Filter (with pre-populated options)
+    $('#allocationStatusFilter').select2({
+      theme: 'bootstrap-5',
+      placeholder: 'Search Allocation Status...',
+      allowClear: false,
+      closeOnSelect: false,
+      width: '100%',
+      data: [
+        { id: 'fully-allocated', text: 'Fully Allocated (All days 100%)' },
+        { id: 'under-allocated', text: 'Under Allocated (Mixed/Partial allocation)' },
+        { id: 'unallocated', text: 'Unallocated (All days 0%)' }
+      ]
+    });
+
+    // Handle Select2 change events for real-time filtering
+    $('.select2-filter').on('change', function() {
+      applyFiltersRealTime();
+    });
+  }
+
+  // Real-time filtering function
+  function applyFiltersRealTime() {
+    activeFilters = {};
+    
+    // Collect filter values from Select2
+    $('.select2-filter').each(function() {
+      const filterType = $(this).data('filter');
+      const selectedValues = $(this).val();
+      
+      if (selectedValues && selectedValues.length > 0) {
+        activeFilters[filterType] = selectedValues;
+      }
+    });
+
+    applyFilters();
+    updateAppliedFiltersDisplay();
+  }
+
+  // Populate practice filters from employee data
+  function populatePracticeFiltersFromEmployeeData() {
+    // Populate practices from employee data
+    if (allPractices.size > 0) {
+      const $practiceFilter = $('#practiceFilter');
+      [...allPractices].sort().forEach(practice => {
+        $practiceFilter.append(`<option value="${practice}">${practice}</option>`);
+      });
+    }
+
+    // Populate practice managers from employee data
+    if (allPracticeManagers.size > 0) {
+      const $practiceManagerFilter = $('#practiceManagerFilter');
+      [...allPracticeManagers].sort().forEach(manager => {
+        $practiceManagerFilter.append(`<option value="${manager}">${manager}</option>`);
+      });
+    }
+  }
+
+  // Populate projects filter
+  function populateProjectsFilter() {
+    const $projectsFilter = $('#projectsFilter');
+    $projectsFilter.find('option:not([value=""])').remove();
+    
+    [...allProjects].sort().forEach(project => {
+      $projectsFilter.append(`<option value="${project}">${project}</option>`);
+    });
+  }
+
+  // Load practices and practice managers from server
+  function loadPracticesAndManagers() {
+    // Load practices
+    $.get('/api/practices')
+      .done(function(practices) {
+        console.log('Loaded practices:', practices);
+        const $practiceFilter = $('#practiceFilter');
+        $practiceFilter.find('option:not([value=""])').remove();
+        
+        if (practices && practices.length > 0) {
+          practices.forEach(practice => {
+            $practiceFilter.append(`<option value="${practice.practiceName}">${practice.practiceName}</option>`);
+            allPractices.add(practice.practiceName);
+            if (practice.practiceManager) {
+              allPracticeManagers.add(practice.practiceManager);
+            }
+          });
+
+          // Populate practice managers filter
+          const $practiceManagerFilter = $('#practiceManagerFilter');
+          $practiceManagerFilter.find('option:not([value=""])').remove();
+          [...allPracticeManagers].sort().forEach(manager => {
+            $practiceManagerFilter.append(`<option value="${manager}">${manager}</option>`);
+          });
+        } else {
+          console.log('No practices found in database');
+          // Add some default options to show the feature works
+          const $practiceFilter = $('#practiceFilter');
+          $practiceFilter.append('<option value="sample-practice">Sample Practice</option>');
+          
+          const $practiceManagerFilter = $('#practiceManagerFilter');
+          $practiceManagerFilter.append('<option value="sample-manager">Sample Manager</option>');
+        }
+      })
+      .fail(function(xhr, status, error) {
+        console.error('Failed to load practices:', error, xhr.responseText);
+        // Add some default options to show the feature works
+        const $practiceFilter = $('#practiceFilter');
+        $practiceFilter.append('<option value="sample-practice">Sample Practice (Demo)</option>');
+        
+        const $practiceManagerFilter = $('#practiceManagerFilter');
+        $practiceManagerFilter.append('<option value="sample-manager">Sample Manager (Demo)</option>');
+      });
+  }
+
+  // Toggle advanced filters dropdown
+  $('#advancedFilterToggle').click(function() {
+    const $dropdown = $('#advancedFiltersDropdown');
+    const $icon = $(this).find('.toggle-icon');
+    
+    if ($dropdown.hasClass('show')) {
+      $dropdown.removeClass('show');
+      $(this).removeClass('active');
+      $icon.removeClass('rotated');
+    } else {
+      $dropdown.addClass('show');
+      $(this).addClass('active');
+      $icon.addClass('rotated');
+    }
+  });
+
+  // Apply filters (Manual button click)
+  $('#applyFilters').click(function() {
+    applyFiltersRealTime();
+  });
+
+  // Clear all filters
+  $('#clearAllFilters, #clearAllTags').click(function() {
+    activeFilters = {};
+    $('.select2-filter').val(null).trigger('change');
+    applyFilters();
+    updateAppliedFiltersDisplay();
+  });
+
+  // Apply filters to the calendar
+  function applyFilters() {
+    $('.employee-row, .employee-calendar-row').each(function(index) {
+      const empRow = $('.employee-row').eq(index);
+      const calendarRow = $('.employee-calendar-row').eq(index);
+      const empName = empRow.find('.emp-name').text();
+      const empCode = empRow.find('.emp-meta').text().split(' | ')[0];
+      
+      // Get employee data for practice filtering
+      const empData = employeeData ? employeeData.find(emp => emp.empCode === empCode) : null;
+      
+      let shouldShow = true;
+
+      // Employee filter
+      if (activeFilters.employee && activeFilters.employee.length > 0) {
+        shouldShow = shouldShow && activeFilters.employee.includes(empCode);
+      }
+
+      // Projects filter
+      if (activeFilters.projects && activeFilters.projects.length > 0) {
+        const hasProjectMatch = calendarRow.find('.project-stack-block').toArray().some(block => {
+          const projectName = $(block).data('project-name');
+          return activeFilters.projects.includes(projectName);
+        });
+        shouldShow = shouldShow && hasProjectMatch;
+      }
+
+      // Practice filter
+      if (activeFilters.practice && activeFilters.practice.length > 0) {
+        const hasPracticeMatch = empData && empData.homePractice && 
+          activeFilters.practice.includes(empData.homePractice);
+        shouldShow = shouldShow && hasPracticeMatch;
+      }
+
+      // Practice Manager filter
+      if (activeFilters.practiceManager && activeFilters.practiceManager.length > 0) {
+        const hasPracticeManagerMatch = empData && empData.practiceManager && 
+          activeFilters.practiceManager.includes(empData.practiceManager);
+        shouldShow = shouldShow && hasPracticeManagerMatch;
+      }
+
+      // Allocation status filter
+      if (activeFilters.allocationStatus && activeFilters.allocationStatus.length > 0) {
+        // Calculate overall employee allocation across all visible working days (excluding weekends)
+        const allCells = calendarRow.find('.calendar-cell').toArray();
+        let totalAllocatedDays = 0;
+        let totalPartialDays = 0;
+        let totalUnallocatedDays = 0;
+        let totalWorkingDays = 0; // Only count working days
+        
+        allCells.forEach(cell => {
+          const dateStr = $(cell).data('date');
+          
+          // Parse date and check if it's a weekend
+          if (dateStr) {
+            // Parse date format: "day-Month-year" (e.g., "1-Jan-2025")
+            const dateParts = dateStr.split('-');
+            if (dateParts.length === 3) {
+              const day = parseInt(dateParts[0]);
+              const monthName = dateParts[1];
+              const year = parseInt(dateParts[2]);
+              
+              // Convert month name to number
+              const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                                'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+              const month = monthNames.indexOf(monthName);
+              
+              if (month !== -1) {
+                const dateObj = new Date(year, month, day);
+                const dayOfWeek = dateObj.getDay(); // 0 = Sunday, 6 = Saturday
+                
+                // Skip weekends (Saturday = 6, Sunday = 0)
+                if (dayOfWeek === 0 || dayOfWeek === 6) {
+                  return; // Skip this iteration
+                }
+              }
+            }
+          }
+          
+          // Count only working days
+          totalWorkingDays++;
+          
+          const totalHours = parseFloat($(cell).data('total-hours')) || 0;
+          const allocationPercent = (totalHours / 8) * 100;
+          
+          if (allocationPercent >= 100) {
+            totalAllocatedDays++;
+          } else if (allocationPercent > 0) {
+            totalPartialDays++;
+          } else {
+            totalUnallocatedDays++;
+          }
+        });
+        
+        // Determine employee's primary allocation status based on working days only
+        let employeeStatus = '';
+        if (totalWorkingDays === 0) {
+          employeeStatus = 'unallocated'; // No working days
+        } else if (totalAllocatedDays === totalWorkingDays) {
+          employeeStatus = 'fully-allocated'; // All working days are fully allocated
+        } else if (totalUnallocatedDays === totalWorkingDays) {
+          employeeStatus = 'unallocated'; // All working days are unallocated
+        } else {
+          employeeStatus = 'under-allocated'; // Mix of allocations or partial allocations
+        }
+        
+        const hasStatusMatch = activeFilters.allocationStatus.includes(employeeStatus);
+        shouldShow = shouldShow && hasStatusMatch;
+      }
+
+      // Show/hide rows with animation
+      if (shouldShow) {
+        empRow.show();
+        calendarRow.show();
+      } else {
+        empRow.hide();
+        calendarRow.hide();
+      }
+    });
+
+    // Update allocation status highlighting
+    updateAllocationStatusHighlighting();
+  }
+
+  // Update allocation status highlighting
+  function updateAllocationStatusHighlighting() {
+    $('.calendar-cell').each(function() {
+      const totalHours = parseFloat($(this).data('total-hours')) || 0;
+      const allocationPercent = (totalHours / 8) * 100;
+      
+      $(this).removeClass('fully-allocated under-allocated unallocated');
+      
+      if (allocationPercent >= 100) {
+        $(this).addClass('fully-allocated');
+      } else if (allocationPercent > 0) {
+        $(this).addClass('under-allocated');
+      } else {
+        $(this).addClass('unallocated');
+      }
+    });
+  }
+
+  // Update applied filters display
+  function updateAppliedFiltersDisplay() {
+    const $appliedSection = $('#appliedFiltersSection');
+    const $tagsContainer = $('#appliedFilterTags');
+    
+    $tagsContainer.empty();
+    
+    if (Object.keys(activeFilters).length === 0) {
+      $appliedSection.removeClass('show');
+      return;
+    }
+
+    // Create filter tags
+    Object.entries(activeFilters).forEach(([filterType, values]) => {
+      values.forEach(value => {
+        const displayName = getFilterDisplayName(filterType, value);
+        const $tag = $(`
+          <div class="filter-tag" data-filter-type="${filterType}" data-filter-value="${value}">
+            <span>${displayName}</span>
+            <button class="remove-tag" type="button">
+              <i class="fas fa-times"></i>
+            </button>
+          </div>
+        `);
+        
+        $tagsContainer.append($tag);
+      });
+    });
+
+    $appliedSection.addClass('show');
+  }
+
+  // Get display name for filter values
+  function getFilterDisplayName(filterType, value) {
+    const filterLabels = {
+      employee: 'Employee',
+      projects: 'Project',
+      practice: 'Practice',
+      practiceManager: 'Practice Manager',
+      allocationStatus: 'Status'
+    };
+
+    const statusLabels = {
+      'fully-allocated': 'Fully Allocated',
+      'under-allocated': 'Under Allocated',
+      'unallocated': 'Unallocated'
+    };
+
+    const label = filterLabels[filterType] || filterType;
+    const displayValue = statusLabels[value] || value;
+    
+    return `${label}: ${displayValue}`;
+  }
+
+  // Remove individual filter tag
+  $(document).on('click', '.remove-tag', function() {
+    const $tag = $(this).closest('.filter-tag');
+    const filterType = $tag.data('filter-type');
+    const filterValue = $tag.data('filter-value');
+    
+    // Remove from active filters
+    if (activeFilters[filterType]) {
+      activeFilters[filterType] = activeFilters[filterType].filter(v => v !== filterValue);
+      if (activeFilters[filterType].length === 0) {
+        delete activeFilters[filterType];
+      }
+    }
+
+    // Update Select2 element
+    const $select = $(`[data-filter="${filterType}"]`);
+    const currentValues = $select.val() || [];
+    const newValues = currentValues.filter(v => v !== filterValue);
+    $select.val(newValues).trigger('change');
+
+    applyFilters();
+    updateAppliedFiltersDisplay();
+  });
+
+  // Initialize everything
+  initializeFilterData();
+  updateAllocationStatusHighlighting();
+
+  // Fix for accessibility: Ensure proper focus management when modals are hidden
+  $('#editModal').on('hidden.bs.modal', function () {
+    // Remove focus from any elements inside the modal
+    $(this).find('*').blur();
+    // Return focus to the document body or a safe element
+    $('body').focus();
+  });
+
+  $('#assignmentModal').on('hidden.bs.modal', function () {
+    // Remove focus from any elements inside the modal
+    $(this).find('*').blur();
+    // Return focus to the document body or a safe element
+    $('body').focus();
+  });
+});
+
+</script>
+
+</body>
+</html>

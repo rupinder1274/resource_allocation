@@ -1,0 +1,72 @@
+
+
+<div class="container mt-4">
+  <h2>Edit Assigned Schedule</h2>
+  <form action="/assigned-schedules/edit/<%= schedule._id %>" method="POST">
+    
+    <!-- Employee Dropdown -->
+    <div class="mb-3">
+      <label for="employee" class="form-label">Employee</label>
+      <select class="form-select" id="employee" name="employee" required>
+        <% employees.forEach(emp => { %>
+          <option value="<%= emp._id %>" <%= emp._id.equals(schedule.employee._id) ? 'selected' : '' %>>
+            <%= emp.name %>
+          </option>
+        <% }) %>
+      </select>
+    </div>
+
+    <!-- Project Dropdown -->
+    <div class="mb-3">
+      <label for="project" class="form-label">Project</label>
+      <select class="form-select" id="project" name="project" required>
+        <% projects.forEach(proj => { %>
+          <option value="<%= proj._id %>" <%= proj._id.equals(schedule.project._id) ? 'selected' : '' %>>
+            <%= proj.projectName %>
+          </option>
+        <% }) %>
+      </select>
+    </div>
+
+    <!-- Practice Dropdown -->
+    <div class="mb-3">
+      <label for="practice" class="form-label">Practice</label>
+      <select class="form-select" id="practice" name="practice" required>
+        <% practices.forEach(prac => { %>
+          <option value="<%= prac._id %>" <%= prac._id.equals(schedule.practice._id) ? 'selected' : '' %>>
+            <%= prac.practiceName %>
+          </option>
+        <% }) %>
+      </select>
+    </div>
+
+    <!-- Other Fields -->
+    <div class="mb-3">
+      <label for="role" class="form-label">Role</label>
+      <input type="text" class="form-control" id="role" name="role" value="<%= schedule.role %>">
+    </div>
+
+    <div class="mb-3">
+      <label for="date" class="form-label">Date</label>
+      <input type="date" class="form-control" id="date" name="date" value="<%= schedule.date.toISOString().substring(0, 10) %>">
+    </div>
+
+    <div class="mb-3">
+      <label for="hours" class="form-label">Hours</label>
+      <input type="number" class="form-control" id="hours" name="hours" value="<%= schedule.hours %>">
+    </div>
+
+    <div class="mb-3">
+      <label for="startDate" class="form-label">Start Date</label>
+      <input type="date" class="form-control" id="startDate" name="startDate" value="<%= schedule.startDate?.toISOString().substring(0, 10) %>">
+    </div>
+
+    <div class="mb-3">
+      <label for="endDate" class="form-label">End Date</label>
+      <input type="date" class="form-control" id="endDate" name="endDate" value="<%= schedule.endDate?.toISOString().substring(0, 10) %>">
+    </div>
+
+    <button type="submit" class="btn btn-primary">Update Schedule</button>
+  </form>
+</div>
+

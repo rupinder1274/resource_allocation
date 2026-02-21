@@ -1,0 +1,57 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Login</title>
+  
+  <!-- Favicon -->
+  <link rel="icon" type="image/jpeg" href="/logo.jpg">
+  <link rel="shortcut icon" type="image/jpeg" href="/logo.jpg">
+  <link rel="apple-touch-icon" href="/logo.jpg">
+  
+  <link rel="stylesheet" href="/stylesheets/styles.css">
+  <style>
+    .logo-container {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+    .login-logo {
+      max-width: 150px;
+      height: auto;
+      border-radius: 10px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Logo Section -->
+    <div class="logo-container">
+      <img src="/logo.jpg" alt="Company Logo" class="login-logo">
+    </div>
+    
+    <!-- <h1>🔐 Login</h1> -->
+
+    <% if (hasErrors) { %>
+      <div style="color: red; margin-bottom: 15px; text-align:center;">
+        <% messages.forEach(function(msg) { %>
+          <p><%= msg %></p>
+        <% }) %>
+      </div>
+    <% } %>
+
+    <form action="/login" method="POST">
+      <label>Email Address:</label>
+      <input type="email" name="email" placeholder="Enter your email" required>
+
+      <label>Password:</label>
+      <input type="password" name="password" placeholder="Enter your password" required>
+
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+
+      <button type="submit">Login</button>
+    </form>
+  </div>
+</body>
+</html>

@@ -1,0 +1,97 @@
+
+
+<h2>Add New Employee</h2>
+
+<!-- ✅ Show validation errors -->
+<% if (errors && errors.length > 0) { %>
+  <ul style="color: red;">
+    <% errors.forEach(err => { %>
+      <li><%= err %></li>
+    <% }) %>
+  </ul>
+<% } %>
+
+<form method="POST" action="/employees/add">
+  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+
+  <label>Emp Code*: <input type="text" name="empCode" required /></label><br/>
+  <label>Name*: <input type="text" name="name" required /></label><br/>
+ <label>Payroll Company:
+  <select name="payrollCompany">
+    <option value="">-- Select --</option>
+    <% payrollCompanies.forEach(pc => { %>
+      <option value="<%= pc %>"><%= pc %></option>
+    <% }) %>
+  </select>
+</label><br/>
+  
+  <label>Division*:
+    <select name="division" required>
+      <option value="">-- Select --</option>
+      <% divisions.forEach(div => { %>
+        <option value="<%= div %>"><%= div %></option>
+      <% }) %>
+    </select>
+  </label><br/>
+
+  <label>Location:
+  <select name="location">
+    <option value="">-- Select --</option>
+    <% locations.forEach(loc => { %>
+      <option value="<%= loc %>"><%= loc %></option>
+    <% }) %>
+  </select>
+</label><br/>
+
+  <label>Designation*:
+    <select name="designation" required>
+      <option value="">-- Select --</option>
+      <% designations.forEach(des => { %>
+        <option value="<%= des %>"><%= des %></option>
+      <% }) %>
+    </select>
+  </label><br/>
+
+  <label>Home Practice*:
+    <select name="homePractice" id="homePractice" required>
+      <option value="">-- Select --</option>
+      <% practices.forEach(p => { %>
+        <option value="<%= p.practiceName %>"><%= p.practiceName %></option>
+      <% }) %>
+    </select>
+  </label><br/>
+
+  <label>Practice Manager:
+    <input type="text" name="practiceManager" id="practiceManager" readonly />
+  </label><br/>
+
+  <button type="submit">➕ Add Employee</button>
+</form>
+
+<a href="/dashboard/admin/view-employees">⬅ Back to Dashboard</a>
+
+<script>
+  document.getElementById('homePractice').addEventListener('change', async function () {
+    const selectedPractice = this.value;
+    const managerInput = document.getElementById('practiceManager');
+
+    if (!selectedPractice) {
+      managerInput.value = '';
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/practice/${encodeURIComponent(selectedPractice)}`);
+      const data = await res.json();
+      if (data.practiceManager) {
+        managerInput.value = data.practiceManager;
+      } else {
+        managerInput.value = '';
+      }
+    } catch (err) {
+      console.error('Error fetching practice manager:', err);
+      managerInput.value = '';
+    }
+  });
+</script>
+

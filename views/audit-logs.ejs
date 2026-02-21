@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/jpeg" href="/logo.jpg">
+    <link rel="shortcut icon" type="image/jpeg" href="/logo.jpg">
+    <link rel="apple-touch-icon" href="/logo.jpg">
+    
+    <link rel="stylesheet" href="/stylesheets/styles.css">
+    <style>
+        .audit-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        .audit-table th, .audit-table td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        .audit-table th {
+            background-color: #f2f2f2;
+            font-weight: bold;
+        }
+        .action-create { color: green; }
+        .action-update { color: orange; }
+        .action-delete { color: red; }
+        .action-bulk_assign { color: blue; }
+        .action-bulk_replace { color: purple; }
+        .role-admin { 
+            background-color: #dc3545; 
+            color: white; 
+            padding: 2px 6px; 
+            border-radius: 3px; 
+            font-size: 11px;
+            font-weight: bold;
+        }
+        .role-manager { 
+            background-color: #007bff; 
+            color: white; 
+            padding: 2px 6px; 
+            border-radius: 3px; 
+            font-size: 11px;
+            font-weight: bold;
+        }
+        .reverted { background-color: #f0f0f0; }
+        .filters {
+            background: #f9f9f9;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+        .filter-row {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+        }
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            min-width: 150px;
+        }
+        .pagination {
+            margin: 20px 0;
+            text-align: center;
+        }
+        .pagination a, .pagination span {
+            padding: 8px 12px;
+            margin: 0 2px;
+            text-decoration: none;
+            border: 1px solid #ddd;
+        }
+        .pagination .current {
+            background-color: #007bff;
+            color: white;
+        }
+
+        .details-btn {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 4px 8px;
+            cursor: pointer;
+            border-radius: 3px;
+            font-size: 12px;
+        }
+        .details-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            z-index: 1000;
+        }
+        .details-content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            max-width: 800px;
+            max-height: 90%;
+            overflow-y: auto;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .details-header {
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 15px;
+            margin-bottom: 20px;
+        }
+        .details-header h3 {
+            margin: 0;
+            color: #007bff;
+            font-size: 24px;
+        }
+        .detail-section {
+            margin-bottom: 25px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #007bff;
+        }
+        .detail-section h4 {
+            margin: 0 0 15px 0;
+            color: #495057;
+            font-size: 16px;
+            font-weight: 600;
+        }
+        .detail-row {
+            display: flex;
+            margin-bottom: 10px;
+            align-items: flex-start;
+        }
+        .detail-label {
+            font-weight: 600;
+            color: #495057;
+            min-width: 120px;
+            margin-right: 15px;
+        }
+        .detail-value {
+            flex: 1;
+            color: #212529;
+        }
+        .action-badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        .action-create { background: #d4edda; color: #155724; }
+        .action-update { background: #fff3cd; color: #856404; }
+        .action-delete { background: #f8d7da; color: #721c24; }
+        .action-bulk_assign { background: #cce5ff; color: #004085; }
+        .action-bulk_replace { background: #e2e3e5; color: #383d41; }
+        .changes-container {
+            background: white;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            padding: 15px;
+            margin-top: 10px;
+        }
+        .changes-title {
+            font-weight: 600;
+            color: #495057;
+            margin-bottom: 10px;
+        }
+        .change-item {
+            margin-bottom: 10px;
+            padding: 8px;
+            border-left: 3px solid #007bff;
+            background: #f8f9fa;
+        }
+        .change-field {
+            font-weight: 600;
+            color: #007bff;
+        }
+        .change-from, .change-to {
+            margin: 5px 0;
+            font-family: monospace;
+            font-size: 13px;
+        }
+        .change-from {
+            color: #dc3545;
+        }
+        .change-to {
+            color: #28a745;
+        }
+        .close-btn {
+            background: #6c757d;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-top: 20px;
+        }
+        .close-btn:hover {
+            background: #545b62;
+        }
+        .alert {
+            padding: 15px;
+            margin-bottom: 20px;
+            border: 1px solid transparent;
+            border-radius: 4px;
+        }
+        .alert-success {
+            color: #3c763d;
+            background-color: #dff0d8;
+            border-color: #d6e9c6;
+        }
+        .alert-danger {
+            color: #a94442;
+            background-color: #f2dede;
+            border-color: #ebccd1;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .button-group {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        .filter-btn, .reset-btn {
+            /* Use inline-flex so both elements (button and anchor) center content identically */
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            height: 44px; /* fixed height to ensure identical vertical size */
+            padding: 0 20px; /* horizontal padding only, vertical centered by flex */
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 600;
+            transition: background-color 0.15s, transform 0.08s;
+            min-width: 120px; /* ensures buttons have same width regardless of label */
+            box-sizing: border-box;
+        }
+        .filter-btn {
+            background-color: #007bff;
+            color: white;
+        }
+        .filter-btn:hover {
+            background-color: #0056b3;
+            transform: translateY(-1px);
+        }
+        .reset-btn {
+            background-color: #3498db;
+            color: white;
+        }
+        .reset-btn:hover {
+            background-color: #2980b9;
+            transform: translateY(-1px);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1><%= title %></h1>
+        
+        <% if (typeof message !== 'undefined' && message) { %>
+            <div class="alert alert-success"><%= message %></div>
+        <% } %>
+        <% if (typeof error !== 'undefined' && error) { %>
+            <div class="alert alert-danger"><%= error %></div>
+        <% } %>
+
+        <!-- Filters -->
+        <div class="filters">
+            <form id="filterForm" method="GET" action="/audit-logs">
+                <div id="dateError" class="alert alert-danger" style="display:none; margin-top:10px; padding:8px 12px;">
+                    <!-- date validation errors will appear here -->
+                </div>
+                <div class="filter-row">
+                    <div class="filter-group">
+                        <label>User Email:</label>
+                        <input type="text" name="manager" value="<%= managerFilter %>" placeholder="Admin or Manager email">
+                    </div>
+                    <div class="filter-group">
+                        <label>User Role:</label>
+                        <select name="role">
+                            <option value="">All Roles</option>
+                            <option value="admin" <%= (typeof roleFilter !== 'undefined' && roleFilter === 'admin') ? 'selected' : '' %>>Admin</option>
+                            <option value="manager" <%= (typeof roleFilter !== 'undefined' && roleFilter === 'manager') ? 'selected' : '' %>>Manager</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>Action:</label>
+                        <select name="action">
+                            <option value="">All Actions</option>
+                            <option value="create" <%= actionFilter === 'create' ? 'selected' : '' %>>Create</option>
+                            <option value="update" <%= actionFilter === 'update' ? 'selected' : '' %>>Update</option>
+                            <option value="delete" <%= actionFilter === 'delete' ? 'selected' : '' %>>Delete</option>
+                            <option value="bulk_assign" <%= actionFilter === 'bulk_assign' ? 'selected' : '' %>>Bulk Assign</option>
+                            <option value="bulk_replace" <%= actionFilter === 'bulk_replace' ? 'selected' : '' %>>Bulk Replace</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>Date From:</label>
+                        <input id="dateFrom" type="date" name="dateFrom" value="<%= dateFrom %>">
+                    </div>
+                    <div class="filter-group">
+                        <label>Date To:</label>
+                        <input id="dateTo" type="date" name="dateTo" value="<%= dateTo %>">
+                    </div>
+                    <div class="filter-group">
+                        <label>&nbsp;</label>
+                        <div class="button-group">
+                            <button type="submit" class="filter-btn">Filter</button>
+                            <a href="/audit-logs" class="reset-btn">Reset</a>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <!-- Results Summary -->
+        <p><strong>Total Records:</strong> <%= totalLogs %> | <strong>Page:</strong> <%= currentPage %> of <%= totalPages %></p>
+
+        <!-- Audit Logs Table -->
+        <table class="audit-table">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>User</th>
+                    <th>Role</th>
+                    <th>Action</th>
+                    <th>Employee</th>
+                    <th>Project</th>
+                    <th>Description</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <% auditLogs.forEach(log => { %>
+                    <tr class="<%= log.isReverted ? 'reverted' : '' %>" data-log-id="<%= log._id %>">
+                        <td><%= new Date(log.timestamp).toLocaleDateString() %></td>
+                        <td><%= log.managerName || log.manager %></td>
+                        <td><span class="<%= log.userRole === 'admin' ? 'role-admin' : 'role-manager' %>"><%= (log.userRole || 'manager').toUpperCase() %></span></td>
+                        <td class="action-<%= log.action %>"><%= log.action.toUpperCase() %></td>
+                        <td><%= log.employeeName || log.employeeCode || 'N/A' %></td>
+                        <td><%= log.projectName || 'N/A' %></td>
+                        <td><%= log.description %></td>
+                        <td>
+                            <button class="details-btn" onclick="showDetails('<%= log._id %>')">Details</button>
+                        </td>
+                    </tr>
+                <% }); %>
+            </tbody>
+        </table>
+
+        <!-- Pagination -->
+        <div class="pagination">
+            <% if (currentPage > 1) { %>
+                <a href="/audit-logs?page=<%= currentPage - 1 %>&manager=<%= managerFilter %>&role=<%= roleFilter || '' %>&action=<%= actionFilter %>&dateFrom=<%= dateFrom %>&dateTo=<%= dateTo %>">&laquo; Previous</a>
+            <% } %>
+            
+            <% for (let i = Math.max(1, currentPage - 2); i <= Math.min(totalPages, currentPage + 2); i++) { %>
+                <% if (i === currentPage) { %>
+                    <span class="current"><%= i %></span>
+                <% } else { %>
+                    <a href="/audit-logs?page=<%= i %>&manager=<%= managerFilter %>&role=<%= roleFilter || '' %>&action=<%= actionFilter %>&dateFrom=<%= dateFrom %>&dateTo=<%= dateTo %>"><%= i %></a>
+                <% } %>
+            <% } %>
+            
+            <% if (currentPage < totalPages) { %>
+                <a href="/audit-logs?page=<%= currentPage + 1 %>&manager=<%= managerFilter %>&role=<%= roleFilter || '' %>&action=<%= actionFilter %>&dateFrom=<%= dateFrom %>&dateTo=<%= dateTo %>">Next &raquo;</a>
+            <% } %>
+        </div>
+    </div>
+
+    <!-- Details Modal -->
+    <div id="detailsModal" class="details-modal">
+        <div class="details-content">
+            <div class="details-header">
+                <h3>Audit Log Details</h3>
+            </div>
+            <div id="detailsBody"></div>
+            <button class="close-btn" onclick="closeDetails()">Close</button>
+        </div>
+    </div>
+
+    <!-- Store audit data as JSON for JavaScript -->
+    <script type="application/json" id="auditData">
+        <%- JSON.stringify(auditLogs) %>
+    </script>
+
+    <script>
+        // Get audit data from the JSON script
+        const auditLogsData = JSON.parse(document.getElementById('auditData').textContent);
+        
+        function showDetails(logId) {
+            const logData = auditLogsData.find(log => log._id === logId);
+            if (logData) {
+                // Debug: Log the changes data to console
+                console.log('Log Data:', logData);
+                console.log('Changes:', logData.changes);
+                
+                // Format the timestamp (date only)
+                const timestamp = new Date(logData.timestamp);
+                const formattedDate = timestamp.toLocaleDateString('en-US', {
+                    weekday: 'long',
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                });
+
+                // Get action display name
+                const actionNames = {
+                    'create': 'Created',
+                    'update': 'Updated', 
+                    'delete': 'Deleted',
+                    'bulk_assign': 'Bulk Assignment',
+                    'bulk_replace': 'Bulk Replacement'
+                };
+
+                let detailsHtml = `
+                    <div class="detail-section">
+                        <h4>📅 When & Who</h4>
+                        <div class="detail-row">
+                            <span class="detail-label">Date:</span>
+                            <span class="detail-value">${formattedDate}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">User:</span>
+                            <span class="detail-value">${logData.managerName || logData.manager || 'Unknown User'}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">Role:</span>
+                            <span class="detail-value">
+                                <span class="${logData.userRole === 'admin' ? 'role-admin' : 'role-manager'}">${(logData.userRole || 'manager').toUpperCase()}</span>
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="detail-section">
+                        <h4>🔧 Action Details</h4>
+                        <div class="detail-row">
+                            <span class="detail-label">Action:</span>
+                            <span class="detail-value">
+                                <span class="action-badge action-${logData.action}">${actionNames[logData.action] || logData.action.toUpperCase()}</span>
+                            </span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">Route:</span>
+                            <span class="detail-value">${logData.route || 'Not specified'}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">Description:</span>
+                            <span class="detail-value">${logData.description || 'No description provided'}</span>
+                        </div>
+                    </div>
+
+                    <div class="detail-section">
+                        <h4>👤 Affected Resources</h4>
+                        <div class="detail-row">
+                            <span class="detail-label">Employee:</span>
+                            <span class="detail-value">${logData.employeeName || 'Not specified'}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">Employee Code:</span>
+                            <span class="detail-value">${logData.employeeCode || 'Not specified'}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">Project:</span>
+                            <span class="detail-value">${logData.projectName || 'Not specified'}</span>
+                        </div>
+                    </div>
+                `;
+                
+                if (logData.changes && Object.keys(logData.changes).length > 0) {
+                    detailsHtml += `
+                        <div class="detail-section">
+                            <h4>📝 Changes Made</h4>
+                            <div class="changes-container">
+                    `;
+                    
+                    Object.keys(logData.changes).forEach(field => {
+                        const change = logData.changes[field];
+                        const fieldName = field.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
+                        
+                        detailsHtml += `<div class="change-item">`;
+                        detailsHtml += `<div class="change-field">${fieldName}:</div>`;
+                        
+                        // Handle different change formats
+                        if (typeof change === 'object' && change !== null) {
+                            // Format: { from: oldValue, to: newValue }
+                            if (change.hasOwnProperty('from') || change.hasOwnProperty('to')) {
+                                if (change.from !== undefined) {
+                                    const fromValue = change.from === null ? 'None' : 
+                                                    typeof change.from === 'object' ? JSON.stringify(change.from, null, 2) : 
+                                                    String(change.from);
+                                    detailsHtml += `<div class="change-from">From: ${fromValue}</div>`;
+                                }
+                                if (change.to !== undefined) {
+                                    const toValue = change.to === null ? 'None' : 
+                                                  typeof change.to === 'object' ? JSON.stringify(change.to, null, 2) : 
+                                                  String(change.to);
+                                    detailsHtml += `<div class="change-to">To: ${toValue}</div>`;
+                                }
+                            } else {
+                                // Handle object as the new value
+                                detailsHtml += `<div class="change-to">New Value: ${JSON.stringify(change, null, 2)}</div>`;
+                            }
+                        } else {
+                            // Handle primitive values as the new value
+                            const value = change === null ? 'None' : String(change);
+                            detailsHtml += `<div class="change-to">New Value: ${value}</div>`;
+                        }
+                        
+                        detailsHtml += `</div>`;
+                    });
+                    
+                    detailsHtml += `
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    // Show a message when no changes are recorded
+                    detailsHtml += `
+                        <div class="detail-section">
+                            <h4>📝 Changes Made</h4>
+                            <div class="changes-container">
+                                <div style="color: #6c757d; font-style: italic; text-align: center; padding: 20px;">
+                                    No detailed changes recorded for this action
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                document.getElementById('detailsBody').innerHTML = detailsHtml;
+                document.getElementById('detailsModal').style.display = 'block';
+            }
+        }
+
+        function closeDetails() {
+            document.getElementById('detailsModal').style.display = 'none';
+        }
+
+        // Close modal when clicking outside of it
+        document.getElementById('detailsModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeDetails();
+            }
+        });
+
+        // Close modal with Escape key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeDetails();
+            }
+        });
+    </script>
+    <script>
+        // Date range validation: ensure Date To is not before Date From
+        (function() {
+            const form = document.getElementById('filterForm');
+            const dateFrom = document.getElementById('dateFrom');
+            const dateTo = document.getElementById('dateTo');
+            const dateError = document.getElementById('dateError');
+
+            function clearError() {
+                dateError.style.display = 'none';
+                dateError.textContent = '';
+            }
+
+            function showError(msg) {
+                dateError.style.display = 'block';
+                dateError.textContent = msg;
+            }
+
+            function isValidRange() {
+                if (!dateFrom || !dateTo) return true;
+                if (!dateFrom.value || !dateTo.value) return true; // nothing to validate
+                const from = new Date(dateFrom.value);
+                const to = new Date(dateTo.value);
+                return to >= from;
+            }
+
+            // Update min on dateTo when dateFrom changes
+            if (dateFrom && dateTo) {
+                dateFrom.addEventListener('change', function() {
+                    if (dateFrom.value) {
+                        dateTo.min = dateFrom.value;
+                        // if current to < from, clear it so user must re-enter or click filter
+                        if (dateTo.value && new Date(dateTo.value) < new Date(dateFrom.value)) {
+                            dateTo.value = '';
+                        }
+                    } else {
+                        dateTo.removeAttribute('min');
+                    }
+                    clearError();
+                });
+
+                dateTo.addEventListener('change', function() {
+                    clearError();
+                    if (!isValidRange()) {
+                        showError('"Date To" must be the same as or after "Date From".');
+                    }
+                });
+            }
+
+            // Validate on submit
+            if (form) {
+                form.addEventListener('submit', function(e) {
+                    clearError();
+                    if (!isValidRange()) {
+                        e.preventDefault();
+                        showError('Please ensure "Date To" is the same as or after "Date From" before filtering.');
+                        // focus the Date To field for quick correction
+                        if (dateTo) dateTo.focus();
+                    }
+                });
+            }
+        })();
+    </script>
+</body>
+</html>

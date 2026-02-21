@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Upload Practice Master</title>
+  <link rel="stylesheet" href="/stylesheets/styles.css">
+</head>
+<body>
+  <div class="container">
+    <h1>📤 Upload Practice Master Excel File</h1>
+    <form action="/upload-practice-master" method="POST" enctype="multipart/form-data">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <input type="file" name="practiceFile" required>
+      <button type="submit">Upload</button>
+    </form>
+    <div style="text-align:center; margin-top:15px;">
+      <a href="/dashboard/admin">⬅ Back to Dashboard</a>
+    </div>
+  </div>
+</body>
+</html>

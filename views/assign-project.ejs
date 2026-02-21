@@ -1,0 +1,26 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Assign Project</title>
+  <link rel="stylesheet" href="/stylesheets/styles.css">
+</head>
+<body>
+  <div class="container">
+    <h1>📌 Assign Project to <%= employee.name %> (<%= employee.empCode %>)</h1>
+
+    <form method="POST" action="/employees/<%= employee.empCode %>/assign-project">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+
+      <label>Project Name:</label>
+      <input type="text" name="project" value="<%= employee.project %>" required>
+
+      <button type="submit">✅ Assign Project</button>
+    </form>
+
+    <div style="text-align:center; margin-top:15px;">
+      <a href="/dashboard/admin">⬅ Back to Dashboard</a>
+    </div>
+  </div>
+</body>
+</html>
