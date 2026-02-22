@@ -354,7 +354,8 @@ async function revertAuditLog(auditLogId, adminEmail, reason) {
 // }).then(() => console.log('✅ MongoDB connected'))
 //   .catch(err => console.error('❌ MongoDB error:', err));
 
-const mongoURI = process.env.MONGODB_URI;
+// const mongoURI = process.env.MONGODB_URI;
+console.log("Mongo URI exists:", !!process.env.MONGODB_URI);
 
 mongoose.connect(process.env.MONGODB_URI).then(() => {
   console.log('Connected to MongoDB atlas successfully');
